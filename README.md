@@ -12,8 +12,8 @@ Chris Munt <cmunt@mgateway.com>
 
 Contents
 
-* [Overview](#overview")
-* [Prerequisites](#prereq")
+* [Overview](#overview)
+* [Prerequisites](#prereq)
 * [Installing mg-dbx-napi](#install)
 * [Connecting to the database](#connect)
 * [Invocation of database commands](#dbcommands)
