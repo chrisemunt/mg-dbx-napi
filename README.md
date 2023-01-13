@@ -3,7 +3,7 @@
 High speed Synchronous and Asynchronous access to InterSystems Cache/IRIS and YottaDB from Node.js or Bun.
 
 Chris Munt <cmunt@mgateway.com>  
-11 January 2023, M/Gateway Developments Ltd [http://www.mgateway.com](http://www.mgateway.com)
+12 January 2023, M/Gateway Developments Ltd [http://www.mgateway.com](http://www.mgateway.com)
 
 * **Note that this is an experimental project and should not be used in production - yet!**
 * Verified to work with Node.js and the Bun JavaScript engine.
@@ -259,13 +259,13 @@ Assuming IRIS is accessed via **localhost** listening on TCP port **7041**
 
 Assuming an 'out of the box' YottaDB installation under **/usr/local/lib/yottadb/r130**.
 
-           var envvars = "";
-           envvars = envvars + "ydb_dir=/root/.yottadb\n";
-           envvars = envvars + "ydb_rel=r1.30_x86_64\n";
-           envvars = envvars + "ydb_gbldir=/root/.yottadb/r1.30_x86_64/g/yottadb.gld\n";
-           envvars = envvars + "ydb_routines=/root/.yottadb/r1.30_x86_64/o*(/root/.yottadb/r1.30_x86_64/r /root/.yottadb/r) /usr/local/lib/yottadb/r130/libyottadbutil.so\n";
-           envvars = envvars + "ydb_ci=/usr/local/lib/yottadb/r130/zmgsi.ci\n";
-           envvars = envvars + "\n";
+           const envvars = {
+              ydb_dir: '/root/.yottadb',
+              ydb_rel: 'r1.30_x86_64',
+              ydb_gbldir: '/root/.yottadb/r1.30_x86_64/g/yottadb.gld',
+              ydb_routines: '/root/.yottadb/r1.30_x86_64/o*(/root/.yottadb/r1.30_x86_64/r /root/.yottadb/r) /usr/local/lib/yottadb/r130/libyottadbutil.so',
+              ydb_ci: 'ydb_ci=/usr/local/lib/yottadb/r130/zmgsi.ci'
+           }
 
            var open = db.open({
                type: "YottaDB",
@@ -273,6 +273,7 @@ Assuming an 'out of the box' YottaDB installation under **/usr/local/lib/yottadb
                env_vars: envvars
              });
 
+* Note that (as with **mg-dbx**) you can still supply the environment variables as a string of _name=value_ pairs each separated by a linefeed character and terminated by a double linefeed.
 
 ##### Network based connectivity
 
@@ -715,3 +716,8 @@ Unless required by applicable law or agreed to in writing, software distributed 
 ### v1.0.1 (11 January 2023)
 
 * Initial Release
+
+### v1.0.2 (12 January 2023)
+
+* Remove the need to prefix global names with the '^' character for API-based connections to YottaDB.
+* Allow the environment variables required for binding to the YottaDB API to be specified as name/value pairs in a separate JSON object.
