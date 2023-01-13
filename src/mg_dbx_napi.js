@@ -30,7 +30,7 @@ const dbx = require('mg-dbx-napi.node');
 
 const DBX_VERSION_MAJOR     = 1;
 const DBX_VERSION_MINOR     = 0;
-const DBX_VERSION_BUILD     = 1;
+const DBX_VERSION_BUILD     = 2;
 
 const DBX_DSORT_INVALID     = 0;
 const DBX_DSORT_DATA        = 1;
@@ -146,7 +146,17 @@ class server {
                this.password = args[0].password;
             }
             if (args[0].hasOwnProperty('env_vars')) {
-               this.env_vars = args[0].env_vars;
+               if (typeof args[0].env_vars === 'object') {
+                  let envvars = '';
+                  for (const name in args[0].env_vars) {
+                     envvars = envvars + name + '=' + args[0].env_vars[name] + '\n';
+                  }
+                  envvars = envvars + '\n';
+                  this.env_vars = envvars;
+               }
+               else {
+                  this.env_vars = args[0].env_vars;
+               }
             }
             if (args[0].hasOwnProperty('debug')) {
                this.debug = args[0].debug;
