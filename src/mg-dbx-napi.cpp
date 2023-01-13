@@ -32,6 +32,11 @@
 Version 1.0.1 11 January 2023:
    First release.
 
+Version 1.0.2 12 January 2023:
+
+   Remove the need to prefix global names with the '^' character for API-based connections to YottaDB.
+
+
 */
 
 #include "mg-dbx-napi.h"

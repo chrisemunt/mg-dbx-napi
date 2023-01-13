@@ -88,6 +88,9 @@ Version 1.3.15 8 April 2022:
 Version 1.3.16 15 June 2022:
    Introduce support for the Merge command.
 
+Version 1.3.17 12 January 2023: cmtxxx
+   Remove the need to prefix global names with the '^' character for API-based connections to YottaDB.
+
 */
 
 
@@ -4868,6 +4871,15 @@ int mg_global_reference(DBXMETH *pmeth)
          break;
       }
       if (pcon->dbtype == DBX_DBTYPE_YOTTADB) {
+         if (n == 0) {
+            if (pmeth->args[n].svalue.buf_addr[0] != '^') { /* v1.3.17 */
+               /* Add '^' to the global name.  This will trash the data header but, as this is the API, we don't need it anymore */
+               pmeth->args[n].svalue.buf_addr --;
+               pmeth->args[n].svalue.buf_addr[0] = '^';
+               pmeth->args[n].svalue.len_used ++;
+               pmeth->args[n].svalue.len_alloc ++;
+            }
+         }
          if (n > 0) {
             pmeth->yargs[n - 1].len_used = pmeth->args[n].svalue.len_used;
             pmeth->yargs[n - 1].len_alloc = pmeth->args[n].svalue.len_alloc;

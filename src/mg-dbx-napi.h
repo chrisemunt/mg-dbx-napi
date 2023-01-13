@@ -42,12 +42,12 @@
 
 #define MAJORVERSION             1
 #define MINORVERSION             0
-#define MAINTVERSION             1
-#define BUILDNUMBER              1
+#define MAINTVERSION             2
+#define BUILDNUMBER              2
 
 #define MGNAPI_VERSION_MAJOR     "1"
 #define MGNAPI_VERSION_MINOR     "0"
-#define MGNAPI_VERSION_BUILD     "1"
+#define MGNAPI_VERSION_BUILD     "2"
 
 #define MGNAPI_VERSION           MGNAPI_VERSION_MAJOR "." MGNAPI_VERSION_MINOR "." MGNAPI_VERSION_BUILD
 #define MGNAPI_COMPANYNAME       "M/Gateway Developments Ltd\0"
