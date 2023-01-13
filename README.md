@@ -264,7 +264,7 @@ Assuming an 'out of the box' YottaDB installation under **/usr/local/lib/yottadb
               ydb_rel: 'r1.30_x86_64',
               ydb_gbldir: '/root/.yottadb/r1.30_x86_64/g/yottadb.gld',
               ydb_routines: '/root/.yottadb/r1.30_x86_64/o*(/root/.yottadb/r1.30_x86_64/r /root/.yottadb/r) /usr/local/lib/yottadb/r130/libyottadbutil.so',
-              ydb_ci: 'ydb_ci=/usr/local/lib/yottadb/r130/zmgsi.ci'
+              ydb_ci: '/usr/local/lib/yottadb/r130/zmgsi.ci'
            }
 
            var open = db.open({
