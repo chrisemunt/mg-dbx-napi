@@ -3,7 +3,7 @@
 High speed Synchronous and Asynchronous access to InterSystems Cache/IRIS and YottaDB from Node.js or Bun.
 
 Chris Munt <cmunt@mgateway.com>  
-12 January 2023, M/Gateway Developments Ltd [http://www.mgateway.com](http://www.mgateway.com)
+22 June 2023, MGateway Ltd [http://www.mgateway.com](http://www.mgateway.com)
 
 * **Note that this is an experimental project and should not be used in production - yet!**
 * Verified to work with Node.js and the Bun JavaScript engine.
@@ -104,8 +104,8 @@ Change to your development UCI and check the installation:
 
        do ^%zmgsi
 
-       M/Gateway Developments Ltd - Service Integration Gateway
-       Version: 4.5; Revision 27 (1 March 2022)
+       MGateway Ltd - Service Integration Gateway
+       Version: 4.5; Revision 28 (3 February 2023)
 
 
 #### Installation for YottaDB
@@ -133,8 +133,8 @@ Link all the **zmgsi** routines and check the installation:
 
        do ^%zmgsi
 
-       M/Gateway Developments Ltd - Service Integration Gateway
-       Version: 4.5; Revision 27 (1 March 2022)
+       MGateway Ltd - Service Integration Gateway
+       Version: 4.5; Revision 28 (3 February 2023)
 
 Note that the version of **zmgsi** is successfully displayed.
 
@@ -697,7 +697,7 @@ Example 2 Reset a container to hold an existing instance (object %Id of 2):
 
 ## <a name="license">License</a>
 
-Copyright (c) 2021-2023 M/Gateway Developments Ltd,
+Copyright (c) 2021-2023 MGateway Ltd,
 Surrey UK.                                                      
 All rights reserved.
  
@@ -721,3 +721,7 @@ Unless required by applicable law or agreed to in writing, software distributed 
 
 * Remove the need to prefix global names with the '^' character for API-based connections to YottaDB.
 * Allow the environment variables required for binding to the YottaDB API to be specified as name/value pairs in a separate JSON object.
+
+### v1.0.2b (22 June 2023)
+
+* Documentation update.
