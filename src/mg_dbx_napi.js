@@ -5,7 +5,7 @@
 //   | Description: An Interface to InterSystems Cache/IRIS and YottaDB         |
 //   | Author:      Chris Munt cmunt@mgateway.com                               |
 //   |                         chris.e.munt@gmail.com                           |
-//   | Copyright (c) 2021-2023 M/Gateway Developments Ltd,                      |
+//   | Copyright(c) 2019 - 2023 MGateway Ltd                                    |
 //   | Surrey UK.                                                               |
 //   | All rights reserved.                                                     |
 //   |                                                                          |
@@ -30,7 +30,7 @@ const dbx = require('mg-dbx-napi.node');
 
 const DBX_VERSION_MAJOR     = 1;
 const DBX_VERSION_MINOR     = 0;
-const DBX_VERSION_BUILD     = 2;
+const DBX_VERSION_BUILD     = 3;
 
 const DBX_DSORT_INVALID     = 0;
 const DBX_DSORT_DATA        = 1;
@@ -505,13 +505,20 @@ class server {
    benchmark(...args) {
       let i = 0;
       let bidx = 0;
+      let data = "";
 
       if (this.init === 0) {
          const ret = dbx.init();
          this.init ++;
       }
-      if (args.length < 1) {
-         return "";
+
+      let argc = args.length;
+      if (argc < 1) {
+         return data;
+      }
+      let context = 0;
+      if (argc > 1) {
+         context = args[1];
       }
 
       let istring = args[0];
@@ -521,9 +528,45 @@ class server {
       }
       this.buffer[bidx][i] = 0;
 
-      const pdata = dbx.benchmark(this.buffer[bidx], i, 0, 0);
-      const data = pdata;
+      if (context === 1) {
+         const pdata = dbx.benchmark(this.buffer[bidx], i, 0, 0);
+         data = pdata;
+      }
+      else {
+         data = "output string";
+      }
       return data;
+   }
+
+   benchmarkex(...args) {
+      let offset = 0;
+      let result = { data: "", error_message: "", type: 0 };
+      let bidx = 0;
+      let data = 0;
+
+      if (this.init === 0) {
+         return data;
+      }
+
+      let argc = args.length;
+      if (argc < 1) {
+         return data;
+      }
+      let command = 0;
+      if (argc === 1) {
+         command = DBX_CMND_GGET;
+      }
+      else if (argc === 3) {
+         command = DBX_CMND_GSET;
+      }
+      if (command === 0) {
+         return data;
+      }
+
+      offset = pack_arguments(this.buffer[bidx], offset, this.index, args, command, 0);
+      const pdata = dbx.benchmarkex(this.buffer[bidx], offset, command, 0);
+      get_result(this.buffer[bidx], pdata, result);
+      return result.data;
    }
 }
 
