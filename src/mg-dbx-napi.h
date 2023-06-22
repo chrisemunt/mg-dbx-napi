@@ -5,7 +5,7 @@
    |              and YottaDB                                                 |
    | Author:      Chris Munt cmunt@mgateway.com                               |
    |                         chris.e.munt@gmail.com                           |
-   | Copyright (c) 2021-2023 M/Gateway Developments Ltd,                      |
+   | Copyright (c) 2019-2023 MGateway Ltd                                     |
    | Surrey UK.                                                               |
    | All rights reserved.                                                     |
    |                                                                          |
@@ -42,12 +42,12 @@
 
 #define MAJORVERSION             1
 #define MINORVERSION             0
-#define MAINTVERSION             2
-#define BUILDNUMBER              2
+#define MAINTVERSION             3
+#define BUILDNUMBER              3
 
 #define MGNAPI_VERSION_MAJOR     "1"
 #define MGNAPI_VERSION_MINOR     "0"
-#define MGNAPI_VERSION_BUILD     "2"
+#define MGNAPI_VERSION_BUILD     "3"
 
 #define MGNAPI_VERSION           MGNAPI_VERSION_MAJOR "." MGNAPI_VERSION_MINOR "." MGNAPI_VERSION_BUILD
 #define MGNAPI_COMPANYNAME       "M/Gateway Developments Ltd\0"
@@ -79,11 +79,12 @@
 #define MGNAPI_EXTFUN(a)    a
 #endif
 
-MGNAPI_EXTFUN(napi_value)  mgnapi_init       (napi_env env, napi_callback_info info);
-MGNAPI_EXTFUN(napi_value)  mgnapi_version    (napi_env env, napi_callback_info info);
-MGNAPI_EXTFUN(napi_value)  mgnapi_dbversion  (napi_env env, napi_callback_info info);
-MGNAPI_EXTFUN(napi_value)  mgnapi_command    (napi_env env, napi_callback_info info);
-MGNAPI_EXTFUN(napi_value)  mgnapi_benchmark  (napi_env env, napi_callback_info info);
+MGNAPI_EXTFUN(napi_value)  mgnapi_init          (napi_env env, napi_callback_info info);
+MGNAPI_EXTFUN(napi_value)  mgnapi_version       (napi_env env, napi_callback_info info);
+MGNAPI_EXTFUN(napi_value)  mgnapi_dbversion     (napi_env env, napi_callback_info info);
+MGNAPI_EXTFUN(napi_value)  mgnapi_command       (napi_env env, napi_callback_info info);
+MGNAPI_EXTFUN(napi_value)  mgnapi_benchmark     (napi_env env, napi_callback_info info);
+MGNAPI_EXTFUN(napi_value)  mgnapi_benchmarkex   (napi_env env, napi_callback_info info);
 
 #endif
 

@@ -5,7 +5,7 @@
    |              and YottaDB API                                             |
    | Author:      Chris Munt cmunt@mgateway.com                               |
    |                         chris.e.munt@gmail.com                           |
-   | Copyright (c) 2017-2023 M/Gateway Developments Ltd,                      |
+   | Copyright (c) 2019-2023 MGateway Ltd                                     |
    | Surrey UK.                                                               |
    | All rights reserved.                                                     |
    |                                                                          |
@@ -88,7 +88,7 @@ Version 1.3.15 8 April 2022:
 Version 1.3.16 15 June 2022:
    Introduce support for the Merge command.
 
-Version 1.3.17 12 January 2023: cmtxxx
+Version 1.3.17 12 January 2023:
    Remove the need to prefix global names with the '^' character for API-based connections to YottaDB.
 
 */
@@ -4858,6 +4858,26 @@ int mg_global_reference(DBXMETH *pmeth)
       pmeth->args[pmeth->argc].svalue.len_alloc = len;
       pmeth->args[pmeth->argc].svalue.buf_addr = (char *) (pmeth->input_str.buf_addr + pmeth->offset);
       pmeth->offset += len;
+
+      if (dtype == DBX_DTYPE_INT) { /* cmtxxx set integer value */
+         unsigned char chr;
+         char buffer[256];
+
+         for (n = 0; n < (len - 1); n ++) { /* cmtxxx advance pointer past leading zeros */
+            if (*(pmeth->args[pmeth->argc].svalue.buf_addr) != '0') {
+               break;
+            }
+            pmeth->args[pmeth->argc].svalue.buf_addr ++;
+            pmeth->args[pmeth->argc].svalue.len_used --;
+         }
+         chr = pmeth->args[pmeth->argc].svalue.buf_addr[pmeth->args[pmeth->argc].svalue.len_used];
+         pmeth->args[pmeth->argc].svalue.buf_addr[pmeth->args[pmeth->argc].svalue.len_used] = '\0';
+         pmeth->args[pmeth->argc].num.int32 = (int) strtol(pmeth->args[pmeth->argc].svalue.buf_addr, NULL, 10);
+/*
+         printf("\r\n len=%d; modified len=%d; int=%d; str=%s", len, pmeth->args[pmeth->argc].svalue.len_used, pmeth->args[pmeth->argc].num.int32, pmeth->args[pmeth->argc].svalue.buf_addr);
+*/
+         pmeth->args[pmeth->argc].svalue.buf_addr[pmeth->args[pmeth->argc].svalue.len_used] = chr;
+      }
 
       /* v1.3.13 */
       last_arg = 0;
