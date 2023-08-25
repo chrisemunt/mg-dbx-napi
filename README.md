@@ -3,9 +3,8 @@
 High speed Synchronous and Asynchronous access to InterSystems Cache/IRIS and YottaDB from Node.js or Bun.
 
 Chris Munt <cmunt@mgateway.com>  
-22 June 2023, MGateway Ltd [http://www.mgateway.com](http://www.mgateway.com)
+25 August 2023, MGateway Ltd [http://www.mgateway.com](http://www.mgateway.com)
 
-* **Note that this is an experimental project and should not be used in production - yet!**
 * Verified to work with Node.js and the Bun JavaScript engine.
 * Two connectivity models to the InterSystems or YottaDB database are provided: High performance via the local database API or network based.
 * [Release Notes](#relnotes) can be found at the end of this document.
@@ -164,6 +163,8 @@ To use a server TCP port other than 7041, specify it in the start-up command (as
 
 ## <a name="connect">Connecting to the database</a>
 
+Most **mg-dbx-napi** methods are capable of operating either synchronously or asynchronously. For an operation to complete asynchronously, simply supply a suitable callback as the last argument in the call.
+
 The first step is to include the **mg-dbx-napi** classes to your JavaScript project.  This part is slightly different between Node.js and Bun.
 
 Node.js users should include the JavaScript file **mg_dbx_napi.js**:
@@ -297,7 +298,7 @@ Assuming YottaDB is accessed via **localhost** listening on TCP port **7041**
 
 Example:
 
-       console.log("\nmg-dbx-bun Version: " + db.version());
+       console.log("\nmg-dbx-napi Version: " + db.version());
 
 
 ### Returning (and optionally changing) the current directory (or Namespace)
@@ -725,3 +726,7 @@ Unless required by applicable law or agreed to in writing, software distributed 
 ### v1.0.2b (22 June 2023)
 
 * Documentation update.
+
+### v1.1.3 (25 August 2023)
+
+* Introduce support for invoking all database commands asynchronously.
