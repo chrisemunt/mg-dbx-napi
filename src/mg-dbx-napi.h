@@ -41,12 +41,12 @@
 #include <node_api.h>
 
 #define MAJORVERSION             1
-#define MINORVERSION             0
+#define MINORVERSION             1
 #define MAINTVERSION             3
 #define BUILDNUMBER              3
 
 #define MGNAPI_VERSION_MAJOR     "1"
-#define MGNAPI_VERSION_MINOR     "0"
+#define MGNAPI_VERSION_MINOR     "1"
 #define MGNAPI_VERSION_BUILD     "3"
 
 #define MGNAPI_VERSION           MGNAPI_VERSION_MAJOR "." MGNAPI_VERSION_MINOR "." MGNAPI_VERSION_BUILD

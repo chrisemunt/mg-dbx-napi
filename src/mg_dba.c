@@ -4859,11 +4859,10 @@ int mg_global_reference(DBXMETH *pmeth)
       pmeth->args[pmeth->argc].svalue.buf_addr = (char *) (pmeth->input_str.buf_addr + pmeth->offset);
       pmeth->offset += len;
 
-      if (dtype == DBX_DTYPE_INT) { /* cmtxxx set integer value */
+      if (dtype == DBX_DTYPE_INT) { /* v1.3.17 set integer value */
          unsigned char chr;
-         char buffer[256];
 
-         for (n = 0; n < (len - 1); n ++) { /* cmtxxx advance pointer past leading zeros */
+         for (n = 0; n < (len - 1); n ++) { /* v1.3.17 advance pointer past leading zeros */
             if (*(pmeth->args[pmeth->argc].svalue.buf_addr) != '0') {
                break;
             }

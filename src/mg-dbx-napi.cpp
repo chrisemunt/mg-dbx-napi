@@ -39,6 +39,15 @@ Version 1.0.2 12 January 2023:
 Version 1.0.2b 22 June 2023:
    Documentation update.
 
+Version 1.1.3 25 August 2023:
+   Introduce support for invoking all database commands asynchronously.
+   Introduce benchmark functions.
+      benchmark() return "" from JS module.
+      benchmark(input_string) process input_string in JS module and return "output string" from JS module.
+      benchmark(input_string, 1) process input_string in NAPI module and return "output string" from NAPI module.
+      result = benchmarkex(global, max, input_string) create max global records set to input_string. Return no records set.
+      result = benchmarkex(global) parse global records (one key) from beginning to end. Return no records read.
+
 */
 
 #include "mg-dbx-napi.h"
@@ -239,6 +248,32 @@ napi_value mgnapi_command(napi_env env, napi_callback_info info)
    return result;
 }
 
+napi_value mgnapi_sleep(napi_env env, napi_callback_info info)
+{
+   int msec;
+   napi_status status;
+   size_t argc = 4;
+   napi_value argv[8];
+   napi_value result;
+
+   status = napi_get_cb_info(env, info, &argc, argv, NULL, NULL);
+
+   if (argc < 1) {
+      napi_create_int32(env, (int32_t) 0, &result);
+      return result;
+   }
+
+   status = napi_get_value_int32(env, argv[0], (int32_t *) &msec);
+   if (status != napi_ok) {
+      napi_create_int32(env, (int32_t) 0, &result);
+      return result;
+   }
+   dbx_sleep(msec);
+
+   napi_create_int32(env, (int32_t) msec, &result);
+   return result;
+}
+
 
 napi_value mgnapi_benchmark(napi_env env, napi_callback_info info)
 {
@@ -267,19 +302,18 @@ napi_value mgnapi_benchmark(napi_env env, napi_callback_info info)
 
 napi_value mgnapi_benchmarkex(napi_env env, napi_callback_info info)
 {
-   int n, dsort, dtype, input_len, dlen, glen, slen, command, context, offset, goffset, soffset, margc;
+   int n, dsort, dtype, input_len, input_buffer_size, klen, dlen, glen, slen, command, context, offset, goffset, soffset, margc;
    unsigned long len, max, cnt;
    unsigned char *input, *output;
-   char buffer[CACHE_MAXSTRLEN], *pbuffer;
-   DBXSTR block;
+   char key[256];
+   char buffer[CACHE_MAXSTRLEN];
+   DBXSTR input_block, output_block;
    napi_status status;
    size_t argc = 4;
    napi_value argv[8];
    napi_value result;
    unsigned char *xdata;
    size_t xlen;
-   DBXSTR str;
-   DBXSTR args[32];
 
    input = (unsigned char *) gbuffer;
    output = (unsigned char *) gbuffer;
@@ -298,21 +332,26 @@ napi_value mgnapi_benchmarkex(napi_env env, napi_callback_info info)
 
    input = xdata;
 
-   str.buf_addr = (char *) input;
-   str.len_alloc = input_len + 256;
-   str.len_used = input_len;
+   input_block.buf_addr = (char *) input;
+   input_block.len_alloc = input_len;
+   input_block.len_used = input_len;
+
+   input_buffer_size = mg_get_block_size(&input_block, 5, &dsort, &dtype);
+   if (input_buffer_size > input_len) {
+      input_block.len_alloc = input_buffer_size;
+   }
 
    margc = 0;
    offset = 15;
-   pbuffer = buffer;
+   goffset = 0;
+   glen = 0;
    dlen = 0;
    slen = 0;
    max = 0;
    for (n = 0; n < 32; n ++) {
-      len = (int) mg_get_block_size(&str, offset, &dsort, &dtype);
+      len = (int) mg_get_block_size(&input_block, offset, &dsort, &dtype);
       offset += 5;
 
-      printf("\r\nn=%d; len=%d; offset=%d; sort=%d; type=%d; str=%s;", n, len, offset, dsort, dtype, str.buf_addr + offset);
       if (dsort == DBX_DSORT_EOD) {
          break;
       }
@@ -322,118 +361,68 @@ napi_value mgnapi_benchmarkex(napi_env env, napi_callback_info info)
          glen = len;
       }
       else if (n == 1) {
-         strncpy(buffer, str.buf_addr + offset, len);
+         strncpy(buffer, input_block.buf_addr + offset, len);
          buffer[len] = '\0';
          max = (unsigned long) strtol(buffer, NULL, 10);
          soffset = offset;
          slen = len;
-         for (cnt = 0; cnt < slen; cnt ++) {
-            str.buf_addr[soffset + cnt] = '0';
+         for (cnt = 0; cnt < (unsigned long) slen; cnt ++) {
+            input_block.buf_addr[soffset + cnt] = '0';
          }
          dtype = DBX_DTYPE_INT;
-         str.buf_addr[soffset - 1] = (unsigned char) ((dsort * 20) + dtype);
+         input_block.buf_addr[soffset - 1] = (unsigned char) ((dsort * 20) + dtype);
       }
       else if (n == 2) {
-/*
-         if (len < CACHE_MAXSTRLEN) {
-            strncpy(pbuffer, str.buf_addr + offset, len);
-            buffer[len] = '\0';
-         }
-*/
          dlen = len;
       }
       offset += len;
    }
 
+   cnt = 0;
    if (margc == 1) {
+      memcpy((void *) buffer, (void *) input_block.buf_addr, (size_t) (goffset + glen));
+      *key = '\0';
+      klen = 0;
 
-      printf("\r\nGET margc=%d; n=%d; len_used=%d\r\n", margc, n, str.len_used);
+      for (;;) {
+         memcpy((void *) input_block.buf_addr, (void *) buffer, (size_t) (goffset + glen));
 
-         str.len_used = goffset + glen;
-      printf("\r\nGET margc=%d; n=%d; len_used=%d\r\n", margc, n, str.len_used);
-
-         mg_add_block_data(&str, (unsigned char *) "", (unsigned long) 0, DBX_DSORT_DATA, DBX_DTYPE_STR);
-
-      printf("\r\nGET add "" margc=%d; n=%d; len_used=%d\r\n", margc, n, str.len_used);
-
-         mg_add_block_data(&str, (unsigned char *) "", (unsigned long) 0, DBX_DSORT_EOD, DBX_DTYPE_STR);
-
-      printf("\r\nGET add EOD margc=%d; n=%d; len_used=%d\r\n", margc, n, str.len_used);
-
-for (n = 0; n < 32; n ++) {
-   printf(" %d %c", (int) input[n], (char) input[n]);
-}
-
-printf("\r\n****now add final size ***\r\n");
-
-      mg_add_block_head_size(&str, (unsigned long) str.len_used, DBX_CMND_GNEXTDATA);
-
-for (n = 0; n < 32; n ++) {
-   printf(" %d %c", (int) input[n], (char) input[n]);
-}
-
-printf("\r\n*******\r\n");
+         input_block.len_used = goffset + glen;
+         mg_add_block_data(&input_block, (unsigned char *) key, (unsigned long) klen, DBX_DSORT_DATA, DBX_DTYPE_STR);
+         mg_add_block_data(&input_block, (unsigned char *) "", (unsigned long) 0, DBX_DSORT_EOD, DBX_DTYPE_STR);
+         mg_add_block_head_size(&input_block, (unsigned long) input_block.len_used, DBX_CMND_GNEXTDATA);
          dbx_next_data(input, output);
 
-for (n = 0; n < 32; n ++) {
-   printf(" %d %c", (int) output[n], (char) output[n]);
-}
-
+         output_block.buf_addr = (char *) output;
+         len = (int) mg_get_block_size(&output_block, 0, &dsort, &dtype);
+         dlen = (int) mg_get_block_size(&output_block, 5, &dsort, &dtype);
+         klen = (int) mg_get_block_size(&output_block, 10 + dlen, &dsort, &dtype);
+         if (klen == 0) {
+            break;
+         }
+         cnt ++;
+         strncpy(key, output_block.buf_addr + 15 + dlen, klen);
+         key[klen] = '\0';
+/*
+         output_block.buf_addr[10 + dlen] = '\0';
+         printf("\r\nkey=%s data=%s", key, output_block.buf_addr + 10);
+*/
+      }
    }
    else if (margc == 3) {
-      printf("\r\nSET margc=%d; n=%d; max=%ld; str=%s", margc, n, max, buffer);
-      for (cnt = 0; cnt < max; cnt ++) {
-         sprintf(buffer, "%u", cnt);
-         len = strlen(buffer);
-         memcpy((void *) (str.buf_addr + (soffset + (slen - len))), (void *) buffer, len);
-      printf("\r\nSET cnt=%d; str=%s", cnt, str.buf_addr + soffset);
-
+      for (cnt = 1; cnt <= max; cnt ++) {
+         sprintf(buffer, "%lu", cnt);
+         len = (unsigned long) strlen(buffer);
+         memcpy((void *) (input_block.buf_addr + (soffset + (slen - len))), (void *) buffer, len);
          dbx_set(input, output);
+      }
+      if (cnt > 0) {
+         cnt --;
       }
    }
 
-/*
-   for (n = 0; n < input_len; n ++) {
-      input[n] = xdata[n];
-   }
-*/
-   memset(output, 0, 5);
-   block.buf_addr = (char *) output;
-   block.len_alloc = 0;
-   block.len_used = 0;
-   len = mg_get_block_size(&block, 0, &dsort, &dtype);
-
-   if (dsort == DBX_DSORT_ERROR) {
-      output[len + 5] = '\0';
-   }
-   else {
-      output[len + 5] = '\0';
-   }
-len = 2;
-{
-int n;
-   DBXSTR block;
-   char buffer[256];
-
-   sprintf(buffer, "%d", 37);
-   block.buf_addr = (char *) output;
-   block.len_alloc = 256;
-   block.len_used = 0;
-//printf("\r\n output=%p; xdata=%p;", output, xdata);
-   mg_add_block_data(&block, (unsigned char *) buffer, (unsigned long) 2, DBX_DSORT_DATA, DBX_DTYPE_STR);
-/*
-printf("\r\n Z output=%p; xdata=%p;", output, xdata);
-for (n = 0; n < 15; n ++) {
-   printf("\r\nn=%d %d %c", n, (unsigned char) output[n], output[n]);
-}
-*/
-
-}
-   for (n = 0; n < 5; n ++) {
-      xdata[n] = output[n];
-   }
-//*(output + 5) = '7';
-   status = napi_create_string_utf8(env, (char *) output + 5, (size_t) len, &result);
+   sprintf(key, "%lu", cnt);
+   status = napi_create_string_utf8(env, key, NAPI_AUTO_LENGTH, &result);
    if (status != napi_ok) {
       napi_create_string_utf8(env, (char *) "", (size_t) 0, &result);
       return result;
@@ -467,6 +456,10 @@ extern "C" {
       assert(status == napi_ok);
 
       desc = DECLARE_NAPI_METHOD("command", mgnapi_command);
+      status = napi_define_properties(env, exports, 1, &desc);
+      assert(status == napi_ok);
+
+      desc = DECLARE_NAPI_METHOD("sleep", mgnapi_sleep);
       status = napi_define_properties(env, exports, 1, &desc);
       assert(status == napi_ok);
 

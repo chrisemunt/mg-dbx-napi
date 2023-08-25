@@ -29,7 +29,7 @@
 const dbx = require('./mg-dbx-napi.node');
 
 const DBX_VERSION_MAJOR: number     = 1;
-const DBX_VERSION_MINOR: number     = 0;
+const DBX_VERSION_MINOR: number     = 1;
 const DBX_VERSION_BUILD: number     = 3;
 
 const DBX_DSORT_INVALID: number     = 0;
@@ -79,8 +79,9 @@ const DBX_CMND_TLEVEL: number       = 62;
 const DBX_CMND_TCOMMIT: number      = 63;
 const DBX_CMND_TROLLBACK: number    = 64;
 
-const DBX_INPUT_BUFFER_SIZE: number = 32768;
+const DBX_INPUT_BUFFER_SIZE: number = 3641145; // or 32768;
 
+type async_callback = (error: boolean, result: string) => void;
 
 export class server {
    type: string = "";
@@ -97,11 +98,20 @@ export class server {
    timeout: number = 60;
    init: number = 0;
    index: number = 0;
-   buffer = new Array(8);
-
+   buffer = [0, 0, 0, 0, 0, 0, 0, 0];
+   buffer_size = [0, 0, 0, 0, 0, 0, 0, 0];
    constructor(...args: any[]) {
       this.buffer[0] = new Uint8Array(DBX_INPUT_BUFFER_SIZE);
       return;
+   }
+
+   get_buffer(): number {
+      let bidx = 0;
+      return bidx;
+   }
+
+   release_buffer(bidx: number): number {
+      return bidx;
    }
 
    version(): string {
@@ -118,14 +128,22 @@ export class server {
 
    open(...args: any[]): string {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_OPEN, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.init === 0) {
          const ret = dbx.init();
          this.init ++;
       }
 
+      request.argc = args.length;
+      if (request.argc > 1) {
+         if (typeof args[request.argc - 1] === "function") {
+            request.async = 1;
+            request.argc --;
+         }
+      }
+
+      let bidx = this.get_buffer();
       if (args.length > 0) {
          if (typeof args[0] === 'object') {
             if (args[0].hasOwnProperty('type')) {
@@ -187,344 +205,554 @@ export class server {
       offset = block_add_string(this.buffer[bidx], offset, this.server_software, this.server_software.length, DBX_DSORT_DATA, DBX_DTYPE_STR);
       offset = block_add_string(this.buffer[bidx], offset, this.timeout.toString(), this.timeout.toString().length, DBX_DSORT_DATA, DBX_DTYPE_INT);
       offset = block_add_string(this.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR);
-      add_head(this.buffer[bidx], 0, offset, DBX_CMND_OPEN);
+      add_head(this.buffer[bidx], 0, offset, request.command);
 
-      const pdata = dbx.command(this.buffer[bidx], offset, DBX_CMND_OPEN, 0);
-      get_result(this.buffer[bidx], pdata, result);
-      return result.data;
+      if (request.async) {
+         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      get_result(this.buffer[bidx], pdata, request);
+      this.release_buffer(bidx);
+
+      return request.result_data;
    }
 
    close(...args: any[]): string {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_CLOSE, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.init === 0) {
          return "";
       }
 
+      request.argc = args.length;
+      if (request.argc > 1) {
+         if (typeof args[request.argc - 1] === "function") {
+            request.async = 1;
+            request.argc --;
+         }
+      }
+
+      let bidx = this.get_buffer();
       offset = block_add_size(this.buffer[bidx], offset, offset, DBX_DSORT_DATA, DBX_DTYPE_INT);
       offset = block_add_size(this.buffer[bidx], offset, this.buffer[bidx].length, DBX_DSORT_DATA, DBX_DTYPE_INT);
       offset = block_add_size(this.buffer[bidx], offset, this.index, DBX_DSORT_DATA, DBX_DTYPE_INT);
 
       offset = block_add_string(this.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR);
-      add_head(this.buffer[bidx], 0, offset, DBX_CMND_CLOSE);
+      add_head(this.buffer[bidx], 0, offset, request.command);
 
-      const pdata = dbx.command(this.buffer[bidx], offset, DBX_CMND_CLOSE, 0);
-      get_result(this.buffer[bidx], pdata, result);
-      return result.data;
+      if (request.async) {
+         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      get_result(this.buffer[bidx], pdata, request);
+      this.release_buffer(bidx);
+
+      return request.result_data;
    }
 
    current_namespace(...args: any[]): string {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_NSGET, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.init === 0) {
          return "";
       }
 
+      request.argc = args.length;
+      if (request.argc > 1) {
+         if (typeof args[request.argc - 1] === "function") {
+            request.async = 1;
+            request.argc --;
+         }
+      }
+
+      let bidx = this.get_buffer();
       offset = block_add_size(this.buffer[bidx], offset, offset, DBX_DSORT_DATA, DBX_DTYPE_INT);
       offset = block_add_size(this.buffer[bidx], offset, this.buffer[bidx].length, DBX_DSORT_DATA, DBX_DTYPE_INT);
       offset = block_add_size(this.buffer[bidx], offset, this.index, DBX_DSORT_DATA, DBX_DTYPE_INT);
 
       if (args.length > 0) {
-         offset = pack_arguments(this.buffer[bidx], offset, this.index, args, DBX_CMND_NSSET, 0);
-         const pdata = dbx.command(this.buffer[bidx], offset, DBX_CMND_NSSET, 0);
+         request.command = DBX_CMND_NSSET;
+         offset = pack_arguments(this.buffer[bidx], offset, this.index, args, request.command, 0);
+         const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
       }
 
+      request.command = DBX_CMND_NSGET;
       offset = 0;
       offset = block_add_size(this.buffer[bidx], offset, offset, DBX_DSORT_DATA, DBX_DTYPE_INT);
       offset = block_add_size(this.buffer[bidx], offset, this.buffer[bidx].length, DBX_DSORT_DATA, DBX_DTYPE_INT);
       offset = block_add_size(this.buffer[bidx], offset, this.index, DBX_DSORT_DATA, DBX_DTYPE_INT);
 
       offset = block_add_string(this.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR);
-      add_head(this.buffer[bidx], 0, offset, DBX_CMND_NSGET);
+      add_head(this.buffer[bidx], 0, offset, request.command);
 
-      const pdata = dbx.command(this.buffer[bidx], offset, DBX_CMND_NSGET, 0);
-      get_result(this.buffer[bidx], pdata, result);
-      return result.data;
+      if (request.async) {
+         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      get_result(this.buffer[bidx], pdata, request);
+      this.release_buffer(bidx);
+
+      return request.result_data;
    }
 
    set(...args: any[]): string {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_GSET, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.init === 0) {
          return "";
       }
 
-      offset = pack_arguments(this.buffer[bidx], offset, this.index, args, DBX_CMND_GSET, 0);
-      const pdata = dbx.command(this.buffer[bidx], offset, DBX_CMND_GSET, 0);
-      get_result(this.buffer[bidx], pdata, result);
-      return result.data;
+      let bidx = this.get_buffer();
+      offset = pack_arguments(this.buffer[bidx], offset, this.index, args, request, 0);
+      if (request.async) {
+         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      get_result(this.buffer[bidx], pdata, request);
+      this.release_buffer(bidx);
+
+      return request.result_data;
    }
 
    get(...args: any[]): string {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_GGET, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.init === 0) {
          return "";
       }
 
-      offset = pack_arguments(this.buffer[bidx], offset, this.index, args, DBX_CMND_GGET, 0);
-      const pdata = dbx.command(this.buffer[bidx], offset, DBX_CMND_GGET, 0);
-      get_result(this.buffer[bidx], pdata, result);
-      return result.data;
+      let bidx = this.get_buffer();
+      offset = pack_arguments(this.buffer[bidx], offset, this.index, args, request, 0);
+      if (request.async) {
+         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      get_result(this.buffer[bidx], pdata, request);
+      this.release_buffer(bidx);
+
+      return request.result_data;
    }
 
    delete(...args: any[]): string {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_GDELETE, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.init === 0) {
          return "";
       }
 
-      offset = pack_arguments(this.buffer[bidx], offset, this.index, args, DBX_CMND_GDELETE, 0);
-      const pdata = dbx.command(this.buffer[bidx], offset, DBX_CMND_GDELETE, 0);
-      get_result(this.buffer[bidx], pdata, result);
-      return result.data;
+      let bidx = this.get_buffer();
+      offset = pack_arguments(this.buffer[bidx], offset, this.index, args, request, 0);
+      if (request.async) {
+         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      get_result(this.buffer[bidx], pdata, request);
+      this.release_buffer(bidx);
+
+      return request.result_data;
    }
 
    defined(...args: any[]): string {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_GDEFINED, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.init === 0) {
          return "";
       }
 
-      offset = pack_arguments(this.buffer[bidx], offset, this.index, args, DBX_CMND_GDEFINED, 0);
-      const pdata = dbx.command(this.buffer[bidx], offset, DBX_CMND_GDEFINED, 0);
-      get_result(this.buffer[bidx], pdata, result);
-      return result.data;
+      let bidx = this.get_buffer();
+      offset = pack_arguments(this.buffer[bidx], offset, this.index, args, request, 0);
+      if (request.async) {
+         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      get_result(this.buffer[bidx], pdata, request);
+      this.release_buffer(bidx);
+
+      return request.result_data;
    }
 
    next(...args: any[]): string {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_GNEXT, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.init === 0) {
          return "";
       }
 
-      offset = pack_arguments(this.buffer[bidx], offset, this.index, args, DBX_CMND_GNEXT, 0);
-      const pdata = dbx.command(this.buffer[bidx], offset, DBX_CMND_GNEXT, 0);
-      get_result(this.buffer[bidx], pdata, result);
-      return result.data;
+      let bidx = this.get_buffer();
+      offset = pack_arguments(this.buffer[bidx], offset, this.index, args, request, 0);
+      if (request.async) {
+         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      get_result(this.buffer[bidx], pdata, request);
+      this.release_buffer(bidx);
 
+      return request.result_data;
    }
 
    previous(...args: any[]): string {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_GPREVIOUS, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.init === 0) {
          return "";
       }
 
-      offset = pack_arguments(this.buffer[bidx], offset, this.index, args, DBX_CMND_GPREVIOUS, 0);
-      const pdata = dbx.command(this.buffer[bidx], offset, DBX_CMND_GPREVIOUS, 0);
-      get_result(this.buffer[bidx], pdata, result);
-      return result.data;
+      let bidx = this.get_buffer();
+      offset = pack_arguments(this.buffer[bidx], offset, this.index, args, request, 0);
+      if (request.async) {
+         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      get_result(this.buffer[bidx], pdata, request);
+      this.release_buffer(bidx);
+
+      return request.result_data;
    }
 
    increment(...args: any[]): string {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_GINCREMENT, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.init === 0) {
          return "";
       }
 
-      offset = pack_arguments(this.buffer[bidx], offset, this.index, args, DBX_CMND_GINCREMENT, 0);
-      const pdata = dbx.command(this.buffer[bidx], offset, DBX_CMND_GINCREMENT, 0);
-      get_result(this.buffer[bidx], pdata, result);
-      return result.data;
+      let bidx = this.get_buffer();
+      offset = pack_arguments(this.buffer[bidx], offset, this.index, args, request, 0);
+      if (request.async) {
+         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      get_result(this.buffer[bidx], pdata, request);
+      this.release_buffer(bidx);
+
+      return request.result_data;
    }
 
    lock(...args: any[]): string {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_GLOCK, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.init === 0) {
          return "";
       }
 
-      offset = pack_arguments(this.buffer[bidx], offset, this.index, args, DBX_CMND_GLOCK, 0);
-      const pdata = dbx.command(this.buffer[bidx], offset, DBX_CMND_GLOCK, 0);
-      get_result(this.buffer[bidx], pdata, result);
-      return result.data;
+      let bidx = this.get_buffer();
+      offset = pack_arguments(this.buffer[bidx], offset, this.index, args, request, 0);
+      if (request.async) {
+         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      get_result(this.buffer[bidx], pdata, request);
+      this.release_buffer(bidx);
+
+      return request.result_data;
    }
 
    unlock(...args: any[]): string {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_GUNLOCK, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.init === 0) {
          return "";
       }
 
-      offset = pack_arguments(this.buffer[bidx], offset, this.index, args, DBX_CMND_GUNLOCK, 0);
-      const pdata = dbx.command(this.buffer[bidx], offset, DBX_CMND_GUNLOCK, 0);
-      get_result(this.buffer[bidx], pdata, result);
-      return result.data;
+      let bidx = this.get_buffer();
+      offset = pack_arguments(this.buffer[bidx], offset, this.index, args, request, 0);
+      if (request.async) {
+         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      get_result(this.buffer[bidx], pdata, request);
+      this.release_buffer(bidx);
+
+      return request.result_data;
    }
 
    tstart(...args: any[]): string {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_TSTART, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.init === 0) {
          return "";
       }
 
+      request.argc = args.length;
+      if (request.argc > 1) {
+         if (typeof args[request.argc - 1] === "function") {
+            request.async = 1;
+            request.argc--;
+         }
+      }
+
+      let bidx = this.get_buffer();
       offset = block_add_size(this.buffer[bidx], offset, offset, DBX_DSORT_DATA, DBX_DTYPE_INT);
       offset = block_add_size(this.buffer[bidx], offset, this.buffer[bidx].length, DBX_DSORT_DATA, DBX_DTYPE_INT);
       offset = block_add_size(this.buffer[bidx], offset, this.index, DBX_DSORT_DATA, DBX_DTYPE_INT);
 
       offset = block_add_string(this.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR);
-      add_head(this.buffer[bidx], 0, offset, DBX_CMND_TSTART);
+      add_head(this.buffer[bidx], 0, offset, request.command);
+      if (request.async) {
+         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      get_result(this.buffer[bidx], pdata, request);
+      this.release_buffer(bidx);
 
-      const pdata = dbx.command(this.buffer[bidx], offset, DBX_CMND_TSTART, 0);
-      get_result(this.buffer[bidx], pdata, result);
-      return result.data;
+      return request.result_data;
    }
 
    tlevel(...args: any[]): string {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_TLEVEL, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.init === 0) {
          return "";
       }
 
+      request.argc = args.length;
+      if (request.argc > 1) {
+         if (typeof args[request.argc - 1] === "function") {
+            request.async = 1;
+            request.argc--;
+         }
+      }
+
+      let bidx = this.get_buffer();
       offset = block_add_size(this.buffer[bidx], offset, offset, DBX_DSORT_DATA, DBX_DTYPE_INT);
       offset = block_add_size(this.buffer[bidx], offset, this.buffer[bidx].length, DBX_DSORT_DATA, DBX_DTYPE_INT);
       offset = block_add_size(this.buffer[bidx], offset, this.index, DBX_DSORT_DATA, DBX_DTYPE_INT);
 
       offset = block_add_string(this.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR);
-      add_head(this.buffer[bidx], 0, offset, DBX_CMND_TLEVEL);
+      add_head(this.buffer[bidx], 0, offset, request.command);
+      if (request.async) {
+         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      get_result(this.buffer[bidx], pdata, request);
+      this.release_buffer(bidx);
 
-      const pdata = dbx.command(this.buffer[bidx], offset, DBX_CMND_TLEVEL, 0);
-      get_result(this.buffer[bidx], pdata, result);
-      return result.data;
+      return request.result_data;
    }
 
    tcommit(...args: any[]): string {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_TCOMMIT, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.init === 0) {
          return "";
       }
 
+      request.argc = args.length;
+      if (request.argc > 1) {
+         if (typeof args[request.argc - 1] === "function") {
+            request.async = 1;
+            request.argc--;
+         }
+      }
+
+      let bidx = this.get_buffer();
       offset = block_add_size(this.buffer[bidx], offset, offset, DBX_DSORT_DATA, DBX_DTYPE_INT);
       offset = block_add_size(this.buffer[bidx], offset, this.buffer[bidx].length, DBX_DSORT_DATA, DBX_DTYPE_INT);
       offset = block_add_size(this.buffer[bidx], offset, this.index, DBX_DSORT_DATA, DBX_DTYPE_INT);
 
       offset = block_add_string(this.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR);
-      add_head(this.buffer[bidx], 0, offset, DBX_CMND_TCOMMIT);
+      add_head(this.buffer[bidx], 0, offset, request.command);
+      if (request.async) {
+         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      get_result(this.buffer[bidx], pdata, request);
+      this.release_buffer(bidx);
 
-      const pdata = dbx.command(this.buffer[bidx], offset, DBX_CMND_TCOMMIT, 0);
-      get_result(this.buffer[bidx], pdata, result);
-      return result.data;
+      return request.result_data;
    }
 
    trollback(...args: any[]): string {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_TROLLBACK, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.init === 0) {
          return "";
       }
 
+      request.argc = args.length;
+      if (request.argc > 1) {
+         if (typeof args[request.argc - 1] === "function") {
+            request.async = 1;
+            request.argc--;
+         }
+      }
+
+      let bidx = this.get_buffer();
       offset = block_add_size(this.buffer[bidx], offset, offset, DBX_DSORT_DATA, DBX_DTYPE_INT);
       offset = block_add_size(this.buffer[bidx], offset, this.buffer[bidx].length, DBX_DSORT_DATA, DBX_DTYPE_INT);
       offset = block_add_size(this.buffer[bidx], offset, this.index, DBX_DSORT_DATA, DBX_DTYPE_INT);
 
       offset = block_add_string(this.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR);
-      add_head(this.buffer[bidx], 0, offset, DBX_CMND_TROLLBACK);
+      add_head(this.buffer[bidx], 0, offset, request.command);
+      if (request.async) {
+         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      get_result(this.buffer[bidx], pdata, request);
+      this.release_buffer(bidx);
 
-      const pdata = dbx.command(this.buffer[bidx], offset, DBX_CMND_TROLLBACK, 0);
-      get_result(this.buffer[bidx], pdata, result);
-      return result.data;
+      return request.result_data;
    }
 
    function(...args: any[]): string {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_FUNCTION, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.init === 0) {
          return "";
       }
 
-      offset = pack_arguments(this.buffer[bidx], offset, this.index, args, DBX_CMND_FUNCTION, 0);
-      const pdata = dbx.command(this.buffer[bidx], offset, DBX_CMND_FUNCTION, 0);
-      get_result(this.buffer[bidx], pdata, result);
-      return result.data;
+      let bidx = this.get_buffer();
+      offset = pack_arguments(this.buffer[bidx], offset, this.index, args, request, 0);
+      if (request.async) {
+         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      get_result(this.buffer[bidx], pdata, request);
+      this.release_buffer(bidx);
+
+      return request.result_data;
+   }
+
+   sleep(msecs: number) {
+      let result = 0;
+
+      result = dbx.sleep(msecs);
+      return result;
    }
 
    classmethod(...args: any[]): any {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_CCMETH, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.init === 0) {
          return "";
       }
 
-      offset = pack_arguments(this.buffer[bidx], offset, this.index, args, DBX_CMND_CCMETH, 0);
-      const pdata = dbx.command(this.buffer[bidx], offset, DBX_CMND_CCMETH, 0);
-      get_result(this.buffer[bidx], pdata, result);
+      let bidx = this.get_buffer();
+      offset = pack_arguments(this.buffer[bidx], offset, this.index, args, request, 0);
+      if (request.async) {
+         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      get_result(this.buffer[bidx], pdata, request);
+      this.release_buffer(bidx);
+
       if (result.type === DBX_DTYPE_OREF) {
          const cls = new mclass(this);
          cls.class_name = args[0];
-         cls.oref = result.data;
+         cls.oref = request.result_data;
          return cls;
       }
 
-      return result.data;
+      return request.result_data;
    }
 
    benchmark(...args: any[]): string {
       let i = 0;
-      let bidx = 0;
+      let data = "";
 
       if (this.init === 0) {
          const ret = dbx.init();
          this.init ++;
       }
-      if (args.length < 1) {
-         return "";
+
+      let argc = args.length;
+      if (argc < 1) {
+         return data;
+      }
+      let context = 0;
+      if (argc > 1) {
+         context = args[1];
       }
 
+      let bidx = this.get_buffer();
       let istring = args[0];
 
-      for (i = 0; i < istring.length; i ++) {
+      for (i = 0; i < istring.length; i++) {
          this.buffer[bidx][i] = istring.charCodeAt(i);
       }
       this.buffer[bidx][i] = 0;
 
-      const pdata = dbx.benchmark(this.buffer[bidx], i, 0, 0);
-      const data = pdata;
+      if (context === 1) {
+         const pdata = dbx.benchmark(this.buffer[bidx], i, 0, 0);
+         data = pdata;
+      }
+      else {
+         data = "output string";
+      }
+      this.release_buffer(bidx);
+
       return data;
+   }
+
+   benchmarkex(...args: any[]): string {
+      let offset = 0;
+      let request = { command: 0, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let data = 0;
+
+      if (this.init === 0) {
+         return data;
+      }
+
+      let argc = args.length;
+      if (argc < 1) {
+         return data;
+      }
+      let command = 0;
+      if (argc === 1) {
+         request.command = DBX_CMND_GGET;
+      }
+      else if (argc === 3) {
+         request.command = DBX_CMND_GSET;
+      }
+      if (request.command === 0) {
+         return data;
+      }
+
+      let bidx = this.get_buffer();
+      offset = pack_arguments(this.buffer[bidx], offset, this.index, args, request, 0);
+      const pdata = dbx.benchmarkex(this.buffer[bidx], offset, request.command, 0);
+      get_result(this.buffer[bidx], pdata, request);
+      this.release_buffer(bidx);
+
+      return request.result_data;
    }
 }
 
@@ -535,10 +763,11 @@ export class mglobal {
    base_offset: number = 0;
 
    constructor(db: server, ...args: any[]) {
+      let request = { command: 0, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
       this.db = db;
       this.base_buffer = new Uint8Array(DBX_INPUT_BUFFER_SIZE);
       this.base_offset = 0;
-      this.base_offset = pack_arguments(this.base_buffer, this.base_offset, this.db.index, args, 0, 0);
+      this.base_offset = pack_arguments(this.base_buffer, this.base_offset, this.db.index, args, request, 0);
       this.base_offset -= 5;
       if (args.length > 0) {
          this.global_name = args[0];
@@ -548,162 +777,216 @@ export class mglobal {
 
    set(...args: any[]): string {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_GSET, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.db.init === 0) {
          return "";
       }
 
+      let bidx = this.db.get_buffer();
       offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
-      offset = pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, DBX_CMND_GSET, 1);
-      const pdata = dbx.command(this.db.buffer[bidx], offset, DBX_CMND_GSET, 0);
-      get_result(this.db.buffer[bidx], pdata, result);
-      return result.data;
+      offset = pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, request, 1);
+      if (request.async) {
+         async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+      get_result(this.db.buffer[bidx], pdata, request);
+      this.db.release_buffer(bidx);
+
+      return request.result_data;
    }
 
    get(...args: any[]): string {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_GGET, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.db.init === 0) {
          return "";
       }
 
+      let bidx = this.db.get_buffer();
       offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
-      offset = pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, DBX_CMND_GGET, 1);
-      const pdata = dbx.command(this.db.buffer[bidx], offset, DBX_CMND_GGET, 0);
-      get_result(this.db.buffer[bidx], pdata, result);
-      return result.data;
+      offset = pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, request, 1);
+      if (request.async) {
+         async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+      get_result(this.db.buffer[bidx], pdata, request);
+      this.db.release_buffer(bidx);
+
+      return request.result_data;
    }
 
    delete(...args: any[]): string {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_GDELETE, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.db.init === 0) {
          return "";
       }
 
+      let bidx = this.db.get_buffer();
       offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
-      offset = pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, DBX_CMND_GDELETE, 1);
-      const pdata = dbx.command(this.db.buffer[bidx], offset, DBX_CMND_GDELETE, 0);
-      get_result(this.db.buffer[bidx], pdata, result);
-      return result.data;
+      offset = pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, request, 1);
+      if (request.async) {
+         async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+      get_result(this.db.buffer[bidx], pdata, request);
+      this.db.release_buffer(bidx);
+
+      return request.result_data;
    }
 
    defined(...args: any[]): string {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_GDEFINED, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.db.init === 0) {
          return "";
       }
 
+      let bidx = this.db.get_buffer();
       offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
-      offset = pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, DBX_CMND_GDEFINED, 1);
-      const pdata = dbx.command(this.db.buffer[bidx], offset, DBX_CMND_GDEFINED, 0);
-      get_result(this.db.buffer[bidx], pdata, result);
-      return result.data;
+      offset = pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, request, 1);
+      if (request.async) {
+         async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+      get_result(this.db.buffer[bidx], pdata, request);
+      this.db.release_buffer(bidx);
+
+      return request.result_data;
    }
 
    next(...args: any[]): string {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_GNEXT, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.db.init === 0) {
          return "";
       }
 
+      let bidx = this.db.get_buffer();
       offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
-      offset = pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, DBX_CMND_GNEXT, 1);
-      const pdata = dbx.command(this.db.buffer[bidx], offset, DBX_CMND_GNEXT, 0);
-      get_result(this.db.buffer[bidx], pdata, result);
-      return result.data;
+      offset = pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, request, 1);
+      if (request.async) {
+         async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+      get_result(this.db.buffer[bidx], pdata, request);
+      this.db.release_buffer(bidx);
+
+      return request.result_data;
    }
 
    previous(...args: any[]): string {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_GPREVIOUS, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.db.init === 0) {
          return "";
       }
 
+      let bidx = this.db.get_buffer();
       offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
-      offset = pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, DBX_CMND_GPREVIOUS, 1);
-      const pdata = dbx.command(this.db.buffer[bidx], offset, DBX_CMND_GPREVIOUS, 0);
-      get_result(this.db.buffer[bidx], pdata, result);
-      return result.data;
+      offset = pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, request, 1);
+      if (request.async) {
+         async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+      get_result(this.db.buffer[bidx], pdata, request);
+      this.db.release_buffer(bidx);
+
+      return request.result_data;
    }
 
    increment(...args: any[]): string {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_GINCREMENT, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.db.init === 0) {
          return "";
       }
 
+      let bidx = this.db.get_buffer();
       offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
-      offset = pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, DBX_CMND_GINCREMENT, 1);
-      const pdata = dbx.command(this.db.buffer[bidx], offset, DBX_CMND_GINCREMENT, 0);
-      get_result(this.db.buffer[bidx], pdata, result);
-      return result.data;
+      offset = pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, request, 1);
+      if (request.async) {
+         async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+      get_result(this.db.buffer[bidx], pdata, request);
+      this.db.release_buffer(bidx);
+
+      return request.result_data;
    }
 
    lock(...args: any[]): string {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_GLOCK, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.db.init === 0) {
          return "";
       }
 
+      let bidx = this.db.get_buffer();
       offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
-      offset = pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, DBX_CMND_GLOCK, 1);
-      const pdata = dbx.command(this.db.buffer[bidx], offset, DBX_CMND_GLOCK, 0);
-      get_result(this.db.buffer[bidx], pdata, result);
-      return result.data;
+      offset = pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, request, 1);
+      if (request.async) {
+         async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+      get_result(this.db.buffer[bidx], pdata, request);
+      this.db.release_buffer(bidx);
+
+      return request.result_data;
    }
 
    unlock(...args: any[]): string {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_GUNLOCK, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.db.init === 0) {
          return "";
       }
 
+      let bidx = this.db.get_buffer();
       offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
-      offset = pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, DBX_CMND_GUNLOCK, 1);
-      const pdata = dbx.command(this.db.buffer[bidx], offset, DBX_CMND_GUNLOCK, 0);
-      get_result(this.db.buffer[bidx], pdata, result);
-      return result.data;
+      offset = pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, request, 1);
+      if (request.async) {
+         async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+      get_result(this.db.buffer[bidx], pdata, request);
+      this.db.release_buffer(bidx);
+
+      return request.result_data;
    }
 
    merge(...args: any[]): string {
       let offset = 0;
       let sort = 0;
       let str = "";
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_GMERGE, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.db.init === 0) {
          return "";
       }
 
+      let bidx = this.db.get_buffer();
       offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
 
-      for (let argn = 0; argn < args.length; argn ++) {
+      for (let argn = 0; argn < args.length; argn++) {
          if (typeof args[argn] === "object" && args[argn].constructor.name == "mglobal") {
             offset = block_copy(this.db.buffer[bidx], offset, args[argn].base_buffer, 15, args[argn].base_offset);
          }
@@ -718,16 +1001,22 @@ export class mglobal {
       }
 
       offset = block_add_string(this.db.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR)
-      add_head(this.db.buffer[bidx], 0, offset, DBX_CMND_GMERGE);
+      add_head(this.db.buffer[bidx], 0, offset, request.command);
+      if (request.async) {
+         async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+      get_result(this.db.buffer[bidx], pdata, request);
+      this.db.release_buffer(bidx);
 
-      const pdata = dbx.command(this.db.buffer[bidx], offset, DBX_CMND_GMERGE, 0);
-      get_result(this.db.buffer[bidx], pdata, result);
-      return result.data;
+      return request.result_data;
    }
 
    reset(...args: any[]) {
+      let request = { command: 0, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
       this.base_offset = 0;
-      this.base_offset = pack_arguments(this.base_buffer, this.base_offset, this.db.index, args, 0, 0);
+      this.base_offset = pack_arguments(this.base_buffer, this.base_offset, this.db.index, args, request, 0);
       this.base_offset -= 5;
       if (args.length > 0) {
          this.global_name = args[0];
@@ -758,14 +1047,16 @@ export class mclass {
          this.base_offset = block_add_string(this.base_buffer, this.base_offset, this.class_name, this.class_name.length, DBX_DSORT_DATA, DBX_DTYPE_STR);
          if (args.length > 1 && this.db.init > 0) {
             let offset = 0;
-            let result = { data: "", error_message: "", type: 0 };
-            let bidx = 0;
+            let request = { command: DBX_CMND_CCMETH, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+            let bidx = this.db.get_buffer();
 
-            offset = pack_arguments(this.db.buffer[bidx], offset, db.index, args, DBX_CMND_CCMETH, 0);
-            const pdata = dbx.command(this.db.buffer[bidx], offset, DBX_CMND_CCMETH, 0);
-            get_result(this.db.buffer[bidx], pdata, result);
+            offset = pack_arguments(this.db.buffer[bidx], offset, db.index, args, request, 0);
+            const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+            get_result(this.db.buffer[bidx], pdata, request);
+            this.db.release_buffer(bidx);
+
             if (result.type === DBX_DTYPE_OREF) {
-               this.oref = result.data;
+               this.oref = request.result_data;
             }
          }
       }
@@ -774,89 +1065,119 @@ export class mclass {
 
    classmethod(...args: any[]): string {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_CCMETH, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.db.init === 0) {
          return "";
       }
 
+      let bidx = this.db.get_buffer();
       offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
-      offset = pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, DBX_CMND_CCMETH, 1);
-      const pdata = dbx.command(this.db.buffer[bidx], offset, DBX_CMND_CCMETH, 0);
-      get_result(this.db.buffer[bidx], pdata, result);
-      if (result.type === DBX_DTYPE_OREF) {
-         this.oref = result.data;
+      offset = pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, request, 1);
+      if (request.async) {
+         async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
       }
-      return result.data;
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+      get_result(this.db.buffer[bidx], pdata, request);
+      this.db.release_buffer(bidx);
+
+      if (result.type === DBX_DTYPE_OREF) {
+         this.oref = request.result_data;
+      }
+      return request.result_data;
    }
 
    method(...args: any[]): string {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_CMETH, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.db.init === 0) {
          return "";
       }
 
+      let bidx = this.db.get_buffer();
       offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, 15);
       offset = block_add_string(this.db.buffer[bidx], offset, this.oref, this.oref.length, DBX_DSORT_DATA, DBX_DTYPE_OREF);
-      offset = pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, DBX_CMND_CMETH, 1);
-      const pdata = dbx.command(this.db.buffer[bidx], offset, DBX_CMND_CMETH, 0);
-      get_result(this.db.buffer[bidx], pdata, result);
-      return result.data;
+      offset = pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, request, 1);
+      if (request.async) {
+         async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+      get_result(this.db.buffer[bidx], pdata, request);
+      this.db.release_buffer(bidx);
+
+      return request.result_data;
    }
 
    getproperty(...args: any[]): string {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_CGETP, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.db.init === 0) {
          return "";
       }
 
+      let bidx = this.db.get_buffer();
       offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, 15);
       offset = block_add_string(this.db.buffer[bidx], offset, this.oref, this.oref.length, DBX_DSORT_DATA, DBX_DTYPE_OREF);
-      offset = pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, DBX_CMND_CGETP, 1);
-      const pdata = dbx.command(this.db.buffer[bidx], offset, DBX_CMND_CGETP, 0);
-      get_result(this.db.buffer[bidx], pdata, result);
-      return result.data;
+      offset = pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, request, 1);
+      if (request.async) {
+         async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+      get_result(this.db.buffer[bidx], pdata, request);
+      this.db.release_buffer(bidx);
+
+      return request.result_data;
    }
 
    setproperty(...args: any[]): string {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_CSETP, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.db.init === 0) {
          return "";
       }
 
+      let bidx = this.db.get_buffer();
       offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, 15);
       offset = block_add_string(this.db.buffer[bidx], offset, this.oref, this.oref.length, DBX_DSORT_DATA, DBX_DTYPE_OREF);
-      offset = pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, DBX_CMND_CSETP, 1);
-      const pdata = dbx.command(this.db.buffer[bidx], offset, DBX_CMND_CSETP, 0);
-      get_result(this.db.buffer[bidx], pdata, result);
-      return result.data;
+      offset = pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, request, 1);
+      if (request.async) {
+         async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+      get_result(this.db.buffer[bidx], pdata, request);
+      this.db.release_buffer(bidx);
+
+      return request.result_data;
    }
 
    closeinstance(...args: any[]): string {
       let offset = 0;
-      let result = { data: "", error_message: "", type: 0 };
-      let bidx = 0;
+      let request = { command: DBX_CMND_CCLOSE, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
       if (this.db.init === 0) {
          return "";
       }
 
+      let bidx = this.db.get_buffer();
       offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, 15);
       offset = block_add_string(this.db.buffer[bidx], offset, this.oref, this.oref.length, DBX_DSORT_DATA, DBX_DTYPE_OREF);
-      offset = pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, DBX_CMND_CCLOSE, 1);
-      const pdata = dbx.command(this.db.buffer[bidx], offset, DBX_CMND_CCLOSE, 0);
-      get_result(this.db.buffer[bidx], pdata, result);
-      return result.data;
+      offset = pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, request, 1);
+      if (request.async) {
+         async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+         return null;
+      }
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+      get_result(this.db.buffer[bidx], pdata, request);
+      this.db.release_buffer(bidx);
+
+      return request.result_data;
    }
 
    reset(...args: any[]) {
@@ -871,14 +1192,16 @@ export class mclass {
          this.base_offset = block_add_string(this.base_buffer, this.base_offset, this.class_name, this.class_name.length, DBX_DSORT_DATA, DBX_DTYPE_STR);
          if (args.length > 1 && this.db.init > 0) {
             let offset = 0;
-            let result = { data: "", error_message: "", type: 0 };
-            let bidx = 0;
+            let request = { command: DBX_CMND_CCMETH, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+            let bidx = this.db.get_buffer();
 
-            offset = pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, DBX_CMND_CCMETH, 0);
-            const pdata = dbx.command(this.db.buffer[bidx], offset, DBX_CMND_CCMETH, 0);
-            get_result(this.db.buffer[bidx], pdata, result);
+            offset = pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, request, 0);
+            const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+            get_result(this.db.buffer[bidx], pdata, request);
+            this.db.release_buffer(bidx);
+
             if (result.type === DBX_DTYPE_OREF) {
-               this.oref = result.data;
+               this.oref = request.result_data;
             }
          }
       }
@@ -886,7 +1209,26 @@ export class mclass {
    }
 }
 
-function pack_arguments(buffer: Uint8Array, offset: number, index: number, args: any[], command: number, context: number): number {
+async function async_command(db: server, buffer: Uint8Array, buffer_size: number, request: { command: number, argc: number, async: number, result_data: string, error_message: string, type: number }, context: number, callback: async_callback) {
+   let promise = new Promise((resolve, reject) => {
+      const pdata = dbx.command(buffer, buffer_size, request.command, context);
+      get_result(buffer, pdata, request);
+      db.release_buffer(0);
+      resolve(request.result_data);
+   });
+   let result_data = await promise
+   if (request.error_message === "") {
+      callback(false, result_data);
+   }
+   else {
+      callback(true, result_data);
+   }
+
+   return;
+}
+
+
+function pack_arguments(buffer: Uint8Array, offset: number, index: number, args: any[], request: { command: number, argc: number, async: number, result_data: string, error_message: string, type: number }, context: number): number {
    let str = "";
 
    if (context === 0) {
@@ -895,7 +1237,15 @@ function pack_arguments(buffer: Uint8Array, offset: number, index: number, args:
       offset = block_add_size(buffer, offset, index, DBX_DSORT_DATA, DBX_DTYPE_INT);
    }
 
-   for (let argn = 0; argn < args.length; argn ++) {
+   request.argc = args.length;
+   if (request.argc > 1) {
+      if (typeof args[request.argc - 1] === "function") {
+         request.async = 1;
+         request.argc --;
+      }
+   }
+
+   for (let argn = 0; argn < request.argc; argn ++) {
       //console.log(argn, " = ", args[argn], " : ", typeof args[argn]);
       if (typeof args[argn] === "string")
          str = args[argn];
@@ -908,12 +1258,12 @@ function pack_arguments(buffer: Uint8Array, offset: number, index: number, args:
    }
 
    offset = block_add_string(buffer, offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR)
-   add_head(buffer, 0, offset, command);
+   add_head(buffer, 0, offset, request.command);
 
    return offset;
 }
 
-function get_result(pbuffer: Uint8Array, pdata: Uint8Array, result: { data: string, error_message: string, type: number }): string {
+function get_result(pbuffer: Uint8Array, pdata: Uint8Array, request: { command: number, argc: number, async: number, result_data: string, error_message: string, type: number }): string {
    let data_properties = { len: 0, type: 0, sort: 0 };
 
    block_get_size(pbuffer, 0, data_properties);
@@ -921,22 +1271,22 @@ function get_result(pbuffer: Uint8Array, pdata: Uint8Array, result: { data: stri
 
    if (data_properties.sort === DBX_DSORT_ERROR) {
       if (data_properties.len === 0) {
-         result.error_message = ""
+         request.error_message = ""
       }
       else {
-         result.error_message = pdata;
+         request.error_message = pdata;
       }
    }
    else {
       if (data_properties.len === 0) {
-         result.data = ""
+         request.result_data = ""
       }
       else {
-         result.data = pdata
+         request.result_data = pdata
       }
    }
-   result.type = data_properties.type;
-   return result.data;
+   request.type = data_properties.type;
+   return request.result_data;
 }
 
 function block_copy(buffer_to: Uint8Array, offset: number, buffer_from: Uint8Array, from: number, to: number): number {
@@ -979,4 +1329,3 @@ function block_get_size(buffer: Uint8Array, offset: number, data_properties: {le
    data_properties.sort = Math.floor(data_properties.sort / 20);
    return data_properties;
 }
-
