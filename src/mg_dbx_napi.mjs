@@ -30,99 +30,99 @@ import { createRequire } from 'module';
 import path from 'path';
 const modulesPath = path.resolve(process.cwd(), 'node_modules');
 const localRequire = createRequire(modulesPath);
-const dbx = require('mg-dbx-napi/binary');
+const dbx = localRequire('mg-dbx-napi/binary');
 
-const DBX_VERSION_MAJOR: number     = 1;
-const DBX_VERSION_MINOR: number     = 1;
-const DBX_VERSION_BUILD: number     = 3;
+const DBX_VERSION_MAJOR     = 1;
+const DBX_VERSION_MINOR     = 1;
+const DBX_VERSION_BUILD     = 3;
 
-const DBX_DSORT_INVALID: number     = 0;
-const DBX_DSORT_DATA: number        = 1;
-const DBX_DSORT_SUBSCRIPT: number   = 2;
-const DBX_DSORT_GLOBAL: number      = 3;
-const DBX_DSORT_EOD: number         = 9;
-const DBX_DSORT_STATUS: number      = 10;
-const DBX_DSORT_ERROR: number       = 11;
+const DBX_DSORT_INVALID     = 0;
+const DBX_DSORT_DATA        = 1;
+const DBX_DSORT_SUBSCRIPT   = 2;
+const DBX_DSORT_GLOBAL      = 3;
+const DBX_DSORT_EOD         = 9;
+const DBX_DSORT_STATUS      = 10;
+const DBX_DSORT_ERROR       = 11;
 
-const DBX_DTYPE_NONE: number        = 0;
-const DBX_DTYPE_STR: number         = 1;
-const DBX_DTYPE_STR8: number        = 2;
-const DBX_DTYPE_STR16: number       = 3;
-const DBX_DTYPE_INT: number         = 4;
-const DBX_DTYPE_INT64: number       = 5;
-const DBX_DTYPE_DOUBLE: number      = 6;
-const DBX_DTYPE_OREF: number        = 7;
-const DBX_DTYPE_NULL: number        = 10;
+const DBX_DTYPE_NONE        = 0;
+const DBX_DTYPE_STR         = 1;
+const DBX_DTYPE_STR8        = 2;
+const DBX_DTYPE_STR16       = 3;
+const DBX_DTYPE_INT         = 4;
+const DBX_DTYPE_INT64       = 5;
+const DBX_DTYPE_DOUBLE      = 6;
+const DBX_DTYPE_OREF        = 7;
+const DBX_DTYPE_NULL        = 10;
 
-const DBX_CMND_OPEN: number         = 1;
-const DBX_CMND_CLOSE: number        = 2;
-const DBX_CMND_NSGET: number        = 3;
-const DBX_CMND_NSSET: number        = 4;
+const DBX_CMND_OPEN         = 1;
+const DBX_CMND_CLOSE        = 2;
+const DBX_CMND_NSGET        = 3;
+const DBX_CMND_NSSET        = 4;
 
-const DBX_CMND_GSET: number         = 11;
-const DBX_CMND_GGET: number         = 12;
-const DBX_CMND_GNEXT: number        = 13;
-const DBX_CMND_GPREVIOUS: number    = 14;
-const DBX_CMND_GDELETE: number      = 15;
-const DBX_CMND_GDEFINED: number     = 16;
-const DBX_CMND_GINCREMENT: number   = 17;
-const DBX_CMND_GLOCK: number        = 18;
-const DBX_CMND_GUNLOCK: number      = 19
-const DBX_CMND_GMERGE: number       = 20
+const DBX_CMND_GSET         = 11;
+const DBX_CMND_GGET         = 12;
+const DBX_CMND_GNEXT        = 13;
+const DBX_CMND_GPREVIOUS    = 14;
+const DBX_CMND_GDELETE      = 15;
+const DBX_CMND_GDEFINED     = 16;
+const DBX_CMND_GINCREMENT   = 17;
+const DBX_CMND_GLOCK        = 18;
+const DBX_CMND_GUNLOCK      = 19
+const DBX_CMND_GMERGE       = 20
 
-const DBX_CMND_FUNCTION: number     = 31;
+const DBX_CMND_FUNCTION     = 31;
 
-const DBX_CMND_CCMETH: number       = 41;
-const DBX_CMND_CGETP: number        = 42;
-const DBX_CMND_CSETP: number        = 43;
-const DBX_CMND_CMETH: number        = 44;
-const DBX_CMND_CCLOSE: number       = 45;
+const DBX_CMND_CCMETH       = 41;
+const DBX_CMND_CGETP        = 42;
+const DBX_CMND_CSETP        = 43;
+const DBX_CMND_CMETH        = 44;
+const DBX_CMND_CCLOSE       = 45;
 
-const DBX_CMND_TSTART: number       = 61;
-const DBX_CMND_TLEVEL: number       = 62;
-const DBX_CMND_TCOMMIT: number      = 63;
-const DBX_CMND_TROLLBACK: number    = 64;
+const DBX_CMND_TSTART       = 61;
+const DBX_CMND_TLEVEL       = 62;
+const DBX_CMND_TCOMMIT      = 63;
+const DBX_CMND_TROLLBACK    = 64;
 
-const DBX_INPUT_BUFFER_SIZE: number = 3641145; // or 32768;
+const DBX_INPUT_BUFFER_SIZE = 3641145; // or 32768
 
-type async_callback = (error: boolean, result: string) => void;
-
-export class server {
-   type: string = "";
-   path: string = "";
-   host: string = "";
-   tcp_port: number = 0;
-   username: string = "";
-   password: string = "";
-   namespace: string = "";
-   env_vars: string = "";
-   debug: string = "";
-   server: string = "";
-   server_software: string = "";
-   timeout: number = 60;
-   init: number = 0;
-   index: number = 0;
+class server {
+   type = "";
+   path = "";
+   host = "";
+   tcp_port = 0;
+   username = "";
+   password = "";
+   namespace = "";
+   env_vars = "";
+   debug = "";
+   server = "";
+   server_software = "";
+   timeout = 60;
+   init = 0;
+   index = 0;
    buffer = [0, 0, 0, 0, 0, 0, 0, 0];
    buffer_size = [0, 0, 0, 0, 0, 0, 0, 0];
-   constructor(...args: any[]) {
+
+   constructor(...args) {
       this.buffer[0] = new Uint8Array(DBX_INPUT_BUFFER_SIZE);
+      this.buffer_size[0] = DBX_INPUT_BUFFER_SIZE;
       return;
    }
 
-   get_buffer(): number {
+   get_buffer() {
       let bidx = 0;
       return bidx;
    }
 
-   release_buffer(bidx: number): number {
+   release_buffer(bidx) {
       return bidx;
    }
 
-   version(): string {
+   version() {
       return dbx.version();
    }
 
-   dbversion(): string {
+   dbversion() {
       if (this.init === 0) {
          const ret = dbx.init();
          this.init ++;
@@ -130,7 +130,7 @@ export class server {
       return dbx.dbversion();
    }
 
-   open(...args: any[]): string {
+   open(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_OPEN, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -223,7 +223,7 @@ export class server {
       return request.result_data;
    }
 
-   close(...args: any[]): string {
+   close(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_CLOSE, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -259,7 +259,7 @@ export class server {
       return request.result_data;
    }
 
-   current_namespace(...args: any[]): string {
+   current_namespace(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_NSGET, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -282,7 +282,7 @@ export class server {
 
       if (args.length > 0) {
          request.command = DBX_CMND_NSSET;
-         offset = pack_arguments(this.buffer[bidx], offset, this.index, args, request.command, 0);
+         offset = pack_arguments(this.buffer[bidx], offset, this.index, args, request, 0);
          const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
       }
 
@@ -307,7 +307,7 @@ export class server {
       return request.result_data;
    }
 
-   set(...args: any[]): string {
+   set(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_GSET, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -328,7 +328,7 @@ export class server {
       return request.result_data;
    }
 
-   get(...args: any[]): string {
+   get(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_GGET, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -349,7 +349,7 @@ export class server {
       return request.result_data;
    }
 
-   delete(...args: any[]): string {
+   delete(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_GDELETE, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -370,7 +370,7 @@ export class server {
       return request.result_data;
    }
 
-   defined(...args: any[]): string {
+   defined(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_GDEFINED, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -391,7 +391,7 @@ export class server {
       return request.result_data;
    }
 
-   next(...args: any[]): string {
+   next(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_GNEXT, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -412,7 +412,7 @@ export class server {
       return request.result_data;
    }
 
-   previous(...args: any[]): string {
+   previous(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_GPREVIOUS, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -433,7 +433,7 @@ export class server {
       return request.result_data;
    }
 
-   increment(...args: any[]): string {
+   increment(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_GINCREMENT, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -454,7 +454,7 @@ export class server {
       return request.result_data;
    }
 
-   lock(...args: any[]): string {
+   lock(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_GLOCK, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -475,7 +475,7 @@ export class server {
       return request.result_data;
    }
 
-   unlock(...args: any[]): string {
+   unlock(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_GUNLOCK, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -496,7 +496,7 @@ export class server {
       return request.result_data;
    }
 
-   tstart(...args: any[]): string {
+   tstart(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_TSTART, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -508,7 +508,7 @@ export class server {
       if (request.argc > 1) {
          if (typeof args[request.argc - 1] === "function") {
             request.async = 1;
-            request.argc--;
+            request.argc --;
          }
       }
 
@@ -530,7 +530,7 @@ export class server {
       return request.result_data;
    }
 
-   tlevel(...args: any[]): string {
+   tlevel(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_TLEVEL, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -542,7 +542,7 @@ export class server {
       if (request.argc > 1) {
          if (typeof args[request.argc - 1] === "function") {
             request.async = 1;
-            request.argc--;
+            request.argc --;
          }
       }
 
@@ -564,7 +564,7 @@ export class server {
       return request.result_data;
    }
 
-   tcommit(...args: any[]): string {
+   tcommit(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_TCOMMIT, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -576,7 +576,7 @@ export class server {
       if (request.argc > 1) {
          if (typeof args[request.argc - 1] === "function") {
             request.async = 1;
-            request.argc--;
+            request.argc --;
          }
       }
 
@@ -598,7 +598,7 @@ export class server {
       return request.result_data;
    }
 
-   trollback(...args: any[]): string {
+   trollback(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_TROLLBACK, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -610,7 +610,7 @@ export class server {
       if (request.argc > 1) {
          if (typeof args[request.argc - 1] === "function") {
             request.async = 1;
-            request.argc--;
+            request.argc --;
          }
       }
 
@@ -632,7 +632,7 @@ export class server {
       return request.result_data;
    }
 
-   function(...args: any[]): string {
+   function(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_FUNCTION, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -652,15 +652,15 @@ export class server {
 
       return request.result_data;
    }
-
-   sleep(msecs: number) {
+ 
+   sleep(msecs) {
       let result = 0;
 
       result = dbx.sleep(msecs);
       return result;
    }
 
-   classmethod(...args: any[]): any {
+   classmethod(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_CCMETH, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -688,7 +688,7 @@ export class server {
       return request.result_data;
    }
 
-   benchmark(...args: any[]): string {
+   benchmark(...args) {
       let i = 0;
       let data = "";
 
@@ -709,7 +709,7 @@ export class server {
       let bidx = this.get_buffer();
       let istring = args[0];
 
-      for (i = 0; i < istring.length; i++) {
+      for (i = 0; i < istring.length; i ++) {
          this.buffer[bidx][i] = istring.charCodeAt(i);
       }
       this.buffer[bidx][i] = 0;
@@ -726,7 +726,7 @@ export class server {
       return data;
    }
 
-   benchmarkex(...args: any[]): string {
+   benchmarkex(...args) {
       let offset = 0;
       let request = { command: 0, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
       let data = 0;
@@ -760,13 +760,13 @@ export class server {
    }
 }
 
-export class mglobal {
-   db: server;
-   global_name: string = "";
-   base_buffer: Uint8Array;
-   base_offset: number = 0;
+class mglobal {
+   db;
+   global_name = "";
+   base_buffer;
+   base_offset = 0;
 
-   constructor(db: server, ...args: any[]) {
+   constructor(db, ...args) {
       let request = { command: 0, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
       this.db = db;
       this.base_buffer = new Uint8Array(DBX_INPUT_BUFFER_SIZE);
@@ -779,7 +779,7 @@ export class mglobal {
       return;
    }
 
-   set(...args: any[]): string {
+   set(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_GSET, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -801,7 +801,7 @@ export class mglobal {
       return request.result_data;
    }
 
-   get(...args: any[]): string {
+   get(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_GGET, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -823,7 +823,7 @@ export class mglobal {
       return request.result_data;
    }
 
-   delete(...args: any[]): string {
+   delete(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_GDELETE, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -845,7 +845,7 @@ export class mglobal {
       return request.result_data;
    }
 
-   defined(...args: any[]): string {
+   defined(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_GDEFINED, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -867,7 +867,7 @@ export class mglobal {
       return request.result_data;
    }
 
-   next(...args: any[]): string {
+   next(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_GNEXT, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -889,7 +889,7 @@ export class mglobal {
       return request.result_data;
    }
 
-   previous(...args: any[]): string {
+   previous(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_GPREVIOUS, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -911,7 +911,7 @@ export class mglobal {
       return request.result_data;
    }
 
-   increment(...args: any[]): string {
+   increment(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_GINCREMENT, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -933,7 +933,7 @@ export class mglobal {
       return request.result_data;
    }
 
-   lock(...args: any[]): string {
+   lock(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_GLOCK, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -955,7 +955,7 @@ export class mglobal {
       return request.result_data;
    }
 
-   unlock(...args: any[]): string {
+   unlock(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_GUNLOCK, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -977,7 +977,7 @@ export class mglobal {
       return request.result_data;
    }
 
-   merge(...args: any[]): string {
+   merge(...args) {
       let offset = 0;
       let sort = 0;
       let str = "";
@@ -990,7 +990,7 @@ export class mglobal {
       let bidx = this.db.get_buffer();
       offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
 
-      for (let argn = 0; argn < args.length; argn++) {
+      for (let argn = 0; argn < args.length; argn ++) {
          if (typeof args[argn] === "object" && args[argn].constructor.name == "mglobal") {
             offset = block_copy(this.db.buffer[bidx], offset, args[argn].base_buffer, 15, args[argn].base_offset);
          }
@@ -1017,7 +1017,7 @@ export class mglobal {
       return request.result_data;
    }
 
-   reset(...args: any[]) {
+   reset(...args) {
       let request = { command: 0, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
       this.base_offset = 0;
       this.base_offset = pack_arguments(this.base_buffer, this.base_offset, this.db.index, args, request, 0);
@@ -1030,14 +1030,14 @@ export class mglobal {
 
 }
 
-export class mclass {
-   db: server;
-   class_name: string = "";
-   oref: string = "";
-   base_buffer: Uint8Array;
-   base_offset: number = 0;
+class mclass {
+   db;
+   class_name = "";
+   oref = "";
+   base_buffer;
+   base_offset = 0;
 
-   constructor(db: server, ...args: any[]) {
+   constructor(db, ...args) {
       this.db = db;
       this.base_buffer = new Uint8Array(DBX_INPUT_BUFFER_SIZE);
       this.base_offset = 0;
@@ -1067,7 +1067,7 @@ export class mclass {
       return;
    }
 
-   classmethod(...args: any[]): string {
+   classmethod(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_CCMETH, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -1092,7 +1092,7 @@ export class mclass {
       return request.result_data;
    }
 
-   method(...args: any[]): string {
+   method(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_CMETH, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -1115,7 +1115,7 @@ export class mclass {
       return request.result_data;
    }
 
-   getproperty(...args: any[]): string {
+   getproperty(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_CGETP, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -1138,7 +1138,7 @@ export class mclass {
       return request.result_data;
    }
 
-   setproperty(...args: any[]): string {
+   setproperty(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_CSETP, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -1161,7 +1161,7 @@ export class mclass {
       return request.result_data;
    }
 
-   closeinstance(...args: any[]): string {
+   closeinstance(...args) {
       let offset = 0;
       let request = { command: DBX_CMND_CCLOSE, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -1184,7 +1184,7 @@ export class mclass {
       return request.result_data;
    }
 
-   reset(...args: any[]) {
+   reset(...args) {
       this.base_offset = 0;
 
       this.base_offset = block_add_size(this.base_buffer, this.base_offset, this.base_offset, DBX_DSORT_DATA, DBX_DTYPE_INT);
@@ -1213,7 +1213,7 @@ export class mclass {
    }
 }
 
-async function async_command(db: server, buffer: Uint8Array, buffer_size: number, request: { command: number, argc: number, async: number, result_data: string, error_message: string, type: number }, context: number, callback: async_callback) {
+async function async_command(db, buffer, buffer_size, request, context, callback) {
    let promise = new Promise((resolve, reject) => {
       const pdata = dbx.command(buffer, buffer_size, request.command, context);
       get_result(buffer, pdata, request);
@@ -1231,8 +1231,7 @@ async function async_command(db: server, buffer: Uint8Array, buffer_size: number
    return;
 }
 
-
-function pack_arguments(buffer: Uint8Array, offset: number, index: number, args: any[], request: { command: number, argc: number, async: number, result_data: string, error_message: string, type: number }, context: number): number {
+function pack_arguments(buffer, offset, index, args, request, context) {
    let str = "";
 
    if (context === 0) {
@@ -1267,11 +1266,11 @@ function pack_arguments(buffer: Uint8Array, offset: number, index: number, args:
    return offset;
 }
 
-function get_result(pbuffer: Uint8Array, pdata: Uint8Array, request: { command: number, argc: number, async: number, result_data: string, error_message: string, type: number }): string {
+function get_result(pbuffer, pdata, request) {
    let data_properties = { len: 0, type: 0, sort: 0 };
 
    block_get_size(pbuffer, 0, data_properties);
-   //console.log("mg_dbx_napi.ts: data_view data properties => ", data_properties);
+   //console.log("mg_dbx_napi.js data_view data properties => ", data_properties);
 
    if (data_properties.sort === DBX_DSORT_ERROR) {
       if (data_properties.len === 0) {
@@ -1286,21 +1285,21 @@ function get_result(pbuffer: Uint8Array, pdata: Uint8Array, request: { command: 
          request.result_data = ""
       }
       else {
-         request.result_data = pdata
+         request.result_data = pdata;
       }
    }
    request.type = data_properties.type;
    return request.result_data;
 }
 
-function block_copy(buffer_to: Uint8Array, offset: number, buffer_from: Uint8Array, from: number, to: number): number {
+function block_copy(buffer_to, offset, buffer_from, from, to) {
    for (let i = from; i < to; i ++) {
       buffer_to[offset ++] = buffer_from[i];
    }
    return offset;
 }
 
-function block_add_string(buffer: Uint8Array, offset: number, data:string, data_len: number, data_sort: number, data_type: number): number {
+function block_add_string(buffer, offset, data, data_len, data_sort, data_type) {
    offset = block_add_size(buffer, offset, data_len, data_sort, data_type);
    for (let i = 0; i < data_len; i ++) {
       buffer[offset ++] = data.charCodeAt(i);
@@ -1308,7 +1307,7 @@ function block_add_string(buffer: Uint8Array, offset: number, data:string, data_
    return offset;
 }
 
-function block_add_size(buffer: Uint8Array, offset: number, data_len: number, data_sort: number, data_type: number): number {
+function block_add_size(buffer, offset, data_len, data_sort, data_type) {
    buffer[offset + 0] = (data_len >> 0);
    buffer[offset + 1] = (data_len >> 8);
    buffer[offset + 2] = (data_len >> 16);
@@ -1317,7 +1316,7 @@ function block_add_size(buffer: Uint8Array, offset: number, data_len: number, da
    return (offset + 5);
 }
 
-function add_head(buffer: Uint8Array, offset: number, data_len: number, cmnd: number): number {
+function add_head(buffer, offset, data_len, cmnd) {
    buffer[offset + 0] = (data_len >> 0);
    buffer[offset + 1] = (data_len >> 8);
    buffer[offset + 2] = (data_len >> 16);
@@ -1326,13 +1325,14 @@ function add_head(buffer: Uint8Array, offset: number, data_len: number, cmnd: nu
    return (offset + 5);
 }
 
-function block_get_size(buffer: Uint8Array, offset: number, data_properties: {len: number; type: number; sort: number}) {
+function block_get_size(buffer, offset, data_properties) {
    data_properties.len = ((buffer[offset + 0]) | (buffer[offset + 1] << 8) | (buffer[offset + 2] << 16) | (buffer[offset + 3] << 24));
    data_properties.sort = buffer[4];
    data_properties.type = data_properties.sort % 20;
    data_properties.sort = Math.floor(data_properties.sort / 20);
    return data_properties;
 }
+
 
 export {
    server,
