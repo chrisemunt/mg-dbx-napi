@@ -26,10 +26,6 @@
 //   ----------------------------------------------------------------------------
 //
 
-import { createRequire } from 'module';
-import path from 'path';
-const modulesPath = path.resolve(process.cwd(), 'node_modules');
-const localRequire = createRequire(modulesPath);
 const dbx = require('mg-dbx-napi/binary');
 
 const DBX_VERSION_MAJOR: number     = 1;
