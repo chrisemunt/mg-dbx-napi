@@ -1,7 +1,5 @@
 # mg-dbx-napi
 
-**Note: This repository is currently under maintenance - please bear with us!**
-
 High speed Synchronous and Asynchronous access to InterSystems Cache/IRIS and YottaDB from Node.js or Bun.
 
 Chris Munt <cmunt@mgateway.com>  
@@ -78,26 +76,26 @@ Change to your development UCI and check the installation:
        do ^%zmgsi
 
        MGateway Ltd - Service Integration Gateway
-       Version: 4.5; Revision 28 (3 February 2023)
+       Version: 4.5; Revision 30 (10 November 2023)
 
 
 #### Installation for YottaDB
 
-The instructions given here assume a standard 'out of the box' installation of **YottaDB** (version 1.30) deployed in the following location:
+The instructions given here assume a standard 'out of the box' installation of **YottaDB** (version 1.38) deployed in the following location:
 
-       /usr/local/lib/yottadb/r130
+       /usr/local/lib/yottadb/r138
 
 The primary default location for routines:
 
-       /root/.yottadb/r1.30_x86_64/r
+       /root/.yottadb/r1.38_x86_64/r
 
 Copy all the routines (i.e. all files with an 'm' extension) held in the GitHub **/yottadb** directory to:
 
-       /root/.yottadb/r1.30_x86_64/r
+       /root/.yottadb/r1.38_x86_64/r
 
 Change directory to the following location and start a **YottaDB** command shell:
 
-       cd /usr/local/lib/yottadb/r130
+       cd /usr/local/lib/yottadb/r138
        ./ydb
 
 Link all the **zmgsi** routines and check the installation:
@@ -107,7 +105,7 @@ Link all the **zmgsi** routines and check the installation:
        do ^%zmgsi
 
        MGateway Ltd - Service Integration Gateway
-       Version: 4.5; Revision 28 (3 February 2023)
+       Version: 4.5; Revision 30 (10 November 2023)
 
 Note that the version of **zmgsi** is successfully displayed.
 
@@ -139,34 +137,15 @@ To use a server TCP port other than 7041, specify it in the start-up command (as
 
 Most **mg-dbx-napi** methods are capable of operating either synchronously or asynchronously. For an operation to complete asynchronously, simply supply a suitable callback as the last argument in the call.
 
-The first step is to include the **mg-dbx-napi** classes to your JavaScript project.  This part is slightly different between Node.js and Bun.
+The first step is to include the **mg-dbx-napi** classes to your JavaScript project.  For example:
 
-Node.js users should include the JavaScript file **mg_dbx_napi.js**:
+       import {server, mglobal, mclass, mcursor} from 'mg-dbx-napi';
 
-       const dbx = require('./mg_dbx_napi.js');
+The **server** class will always be required.  For classes **mglobal**, **mclass** and **mcursor**, just import the ones that you need.
 
-Creating new database, global and InterSystems class container objects in Node.js:
-
-       let db = new dbx.server();
-       let mglobal = new dbx.mglobal(db, <global name>[, <fixed_key>]);
-       let mclass = new dbx.mclass(db, <class name>);
-
-Bun users should include the TypeScript file **mg_dbx_napi.ts**:
-
-       import {server} from './mg_dbx_napi.ts';
-       import {mglobal} from './mg_dbx_napi.ts';
-       import {mclass} from './mg_dbx_napi.ts';
-
-* Note: check that the Node-API module (**mg-dbx-napi.node**) is available in your working directory
-
-Creating new database, global and InterSystems class container objects in Bun:
+Creating an instance of the **server** class:
 
        let db = new server();
-       let mglobal = new mglobal(db, <global name>[, <fixed_key>]);
-       let mclass = new mclass(db, <class name>);
-
-Having taken these initial differences on board the methods described in the following sections are common to both Node.js and Bun.
-
 
 ### Open a connection to the database
 
@@ -232,19 +211,19 @@ Assuming IRIS is accessed via **localhost** listening on TCP port **7041**
 
 ##### API based connectivity
 
-Assuming an 'out of the box' YottaDB installation under **/usr/local/lib/yottadb/r130**.
+Assuming an 'out of the box' YottaDB installation under **/usr/local/lib/yottadb/r138**.
 
            const envvars = {
               ydb_dir: '/root/.yottadb',
-              ydb_rel: 'r1.30_x86_64',
-              ydb_gbldir: '/root/.yottadb/r1.30_x86_64/g/yottadb.gld',
-              ydb_routines: '/root/.yottadb/r1.30_x86_64/o*(/root/.yottadb/r1.30_x86_64/r /root/.yottadb/r) /usr/local/lib/yottadb/r130/libyottadbutil.so',
-              ydb_ci: '/usr/local/lib/yottadb/r130/zmgsi.ci'
+              ydb_rel: 'r1.38_x86_64',
+              ydb_gbldir: '/root/.yottadb/r1.38_x86_64/g/yottadb.gld',
+              ydb_routines: '/root/.yottadb/r1.38_x86_64/o*(/root/.yottadb/r1.38_x86_64/r /root/.yottadb/r) /usr/local/lib/yottadb/r138/libyottadbutil.so',
+              ydb_ci: '/usr/local/lib/yottadb/r138/zmgsi.ci'
            }
 
            var open = db.open({
                type: "YottaDB",
-               path: "/usr/local/lib/yottadb/r130",
+               path: "/usr/local/lib/yottadb/r138",
                env_vars: envvars
              });
 
