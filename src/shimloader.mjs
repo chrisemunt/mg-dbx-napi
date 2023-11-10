@@ -9,8 +9,10 @@ else {
 let server = mod.server;
 let mglobal = mod.mglobal;
 let mclass = mod.mclass;
+let mcursor = mod.mcursor;
 export {
   server,
   mglobal,
-  mclass
+  mclass,
+  mcursor
 }
