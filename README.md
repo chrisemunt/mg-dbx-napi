@@ -1,9 +1,11 @@
 # mg-dbx-napi
 
+###Note: This repository is currently under maintenance - please bear with us!
+
 High speed Synchronous and Asynchronous access to InterSystems Cache/IRIS and YottaDB from Node.js or Bun.
 
 Chris Munt <cmunt@mgateway.com>  
-25 August 2023, MGateway Ltd [http://www.mgateway.com](http://www.mgateway.com)
+10 November 2023, MGateway Ltd [http://www.mgateway.com](http://www.mgateway.com)
 
 * Verified to work with Node.js and the Bun JavaScript engine.
 * Two connectivity models to the InterSystems or YottaDB database are provided: High performance via the local database API or network based.
@@ -12,11 +14,11 @@ Chris Munt <cmunt@mgateway.com>
 Contents
 
 * [Overview](#overview)
-* [Prerequisites](#prereq)
 * [Installing mg-dbx-napi](#install)
 * [Connecting to the database](#connect)
 * [Invocation of database commands](#dbcommands)
 * [Invocation of database functions](#dbfunctions)
+* [Cursor based data retrieval](#cursors)
 * [Transaction Processing](#tprocessing)
 * [Direct access to InterSystems classes (IRIS and Cache)](#dbclasses)
 * [License](#license)
@@ -43,34 +45,6 @@ The Bun _shim_ is provided as a TypeScript module:
 
        MyBunApplication.js -> mg_dbx_napi.ts -> mg-dbx-napi.node
 
-
-## <a name="prereq">Prerequisites</a>
-
-**mg-dbx-napi** is a Node.js addon written in C++.  It is distributed as C++ source code and the NPM installation procedure will expect a C++ compiler to be present on the target system.
-
-Linux systems can use the freely available GNU C++ compiler (g++) which can be installed as follows.
-
-Ubuntu:
-
-       apt-get install g++
-
-Red Hat and CentOS:
-
-       yum install gcc-c++
-
-Apple OS X can use the freely available **Xcode** development environment.
-
-Windows can use the freely available Visual Studio Community Edition:
-
-* Microsoft Visual Studio Community: [https://www.visualstudio.com/vs/community/](https://www.visualstudio.com/vs/community/)
-
-If the Windows machine is not set up for systems development, building native Addon modules for this platform from C++ source can be quite arduous.  There is some helpful advice available at:
-
-* [Compiling native Addon modules for Windows](https://github.com/Microsoft/nodejs-guidelines/blob/master/windows-environment.md#compiling-native-addon-modules)
-
-Alternatively there are built Windows x64 binaries available from:
-
-* [https://github.com/chrisemunt/mg-dbx-napi/blob/master/bin/winx64](https://github.com/chrisemunt/mg-dbx-napi/blob/master/bin/winx64)
 
 ## <a name="install">Installing mg-dbx-napi</a>
 
@@ -556,6 +530,86 @@ Alternatively:
        global1.merge(1, global2, 0);
 
 
+## <a name="cursors"></a> Cursor based data retrieval
+
+The **mcursor** class.
+
+This facility provides high-performance techniques for traversing records held in database globals. 
+
+### Specifying the query
+
+The first task is to specify the 'query' for the global traverse.
+
+       query = new mcursor(db, {global: <global_name>, key: [<seed_key>]}[, <options>]);
+
+The 'options' object can contain the following properties:
+
+* **multilevel**: A boolean value (default: **multilevel: false**). Set to 'true' to return all descendant nodes from the specified 'seed_key'.
+
+* **getdata**: A boolean value (default: **getdata: false**). Set to 'true' to return any data values associated with each global node returned.
+
+* **format**: Format for output (default: not specified). If the output consists of multiple data elements, the return value (by default) is a JavaScript object made up of a 'key' array and an associated 'data' value.  Set to "url" to return such data as a single URL escaped string including all key values ('key[1->n]') and any associated 'data' value.
+
+Example (return all keys and names from the 'Person' global):
+
+       query = new mcursor(db, {global: "Person", key: [""]}, {multilevel: false, getdata: true});
+
+### Traversing the dataset
+
+In key order:
+
+       result = query.next();
+
+In reverse key order:
+
+       result = query.previous();
+
+In all cases these methods will return 'null' when the end of the dataset is reached.
+
+Example 1 (return all key values from the 'Person' global - returns a simple variable):
+
+       query = new mcursor(db, {global: "Person", key: [""]});
+       while ((result = query.next()) !== null) {
+          console.log("result: " + result);
+       }
+
+Example 2 (return all key values and names from the 'Person' global - returns an object):
+
+       query = new mcursor(db, {global: "Person", key: [""]}, multilevel: false, getdata: true);
+       while ((result = query.next()) !== null) {
+          console.log("result: " + JSON.stringify(result, null, '\t'));
+       }
+
+
+Example 3 (return all key values and names from the 'Person' global - returns a string):
+
+       query = new mcursor(db, {global: "Person", key: [""]}, multilevel: false, getdata: true, format: "url"});
+       while ((result = query.next()) !== null) {
+          console.log("result: " + result);
+       }
+
+Example 4 (return all key values and names from the 'Person' global, including any descendant nodes):
+
+       query = new mcursor(db, {global: "Person", key: [""]}, {{multilevel: true, getdata: true});
+       while ((result = query.next()) !== null) {
+          console.log("result: " + JSON.stringify(result, null, '\t'));
+       }
+
+* M programmers will recognise this last example as the M **$Query()** command.
+ 
+
+### Traversing the global directory (return a list of global names)
+
+       query = new mcursor(db, {global: <seed_global_name>}, {globaldirectory: true});
+
+Example (return all global names held in the current directory)
+
+       query = new mcursor(db, {global: ""}, {globaldirectory: true});
+       while ((result = query.next()) !== null) {
+          console.log("result: " + result);
+       }
+
+
 ## <a name="dbfunctions">Invocation of database functions</a>
 
        result = db.function(<function>, <parameters>);
@@ -730,3 +784,8 @@ Unless required by applicable law or agreed to in writing, software distributed 
 ### v1.1.3 (25 August 2023)
 
 * Introduce support for invoking all database commands asynchronously.
+
+### v1.2.4 (10 November 2023)
+
+* Introduce support for the mcursor class
+
