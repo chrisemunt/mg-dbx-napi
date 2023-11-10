@@ -21,69 +21,90 @@
 //   | distributed under the License is distributed on an "AS IS" BASIS,        |
 //   | WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. |
 //   | See the License for the specific language governing permissions and      |
-//   | limitations under the License.                                           |      
+//   | limitations under the License.                                           |
 //   |                                                                          |
 //   ----------------------------------------------------------------------------
 //
 
-const dbx = require('mg-dbx-napi/binary');
+let dbx;
+let arch = process.arch;
+if (arch === 'x64' && process.platform === 'win32') arch = 'win';
+if (['win', 'arm64', 'x64'].includes(arch)) {
+   dbx = require('mg-dbx-napi/' + arch);
+}
+else {
+   // throw an error - platform not supported
+}
+//const dbx = require('./mg-dbx-napi.node');
 
-const DBX_VERSION_MAJOR: number     = 1;
-const DBX_VERSION_MINOR: number     = 1;
-const DBX_VERSION_BUILD: number     = 3;
+const DBX_VERSION_MAJOR: number      = 1;
+const DBX_VERSION_MINOR: number      = 2;
+const DBX_VERSION_BUILD: number      = 4;
 
-const DBX_DSORT_INVALID: number     = 0;
-const DBX_DSORT_DATA: number        = 1;
-const DBX_DSORT_SUBSCRIPT: number   = 2;
-const DBX_DSORT_GLOBAL: number      = 3;
-const DBX_DSORT_EOD: number         = 9;
-const DBX_DSORT_STATUS: number      = 10;
-const DBX_DSORT_ERROR: number       = 11;
+const DBX_DSORT_INVALID: number      = 0;
+const DBX_DSORT_DATA: number         = 1;
+const DBX_DSORT_SUBSCRIPT: number    = 2;
+const DBX_DSORT_GLOBAL: number       = 3;
+const DBX_DSORT_EOD: number          = 9;
+const DBX_DSORT_STATUS: number       = 10;
+const DBX_DSORT_ERROR: number        = 11;
 
-const DBX_DTYPE_NONE: number        = 0;
-const DBX_DTYPE_STR: number         = 1;
-const DBX_DTYPE_STR8: number        = 2;
-const DBX_DTYPE_STR16: number       = 3;
-const DBX_DTYPE_INT: number         = 4;
-const DBX_DTYPE_INT64: number       = 5;
-const DBX_DTYPE_DOUBLE: number      = 6;
-const DBX_DTYPE_OREF: number        = 7;
-const DBX_DTYPE_NULL: number        = 10;
+const DBX_DTYPE_NONE: number         = 0;
+const DBX_DTYPE_STR: number          = 1;
+const DBX_DTYPE_STR8: number         = 2;
+const DBX_DTYPE_STR16: number        = 3;
+const DBX_DTYPE_INT: number          = 4;
+const DBX_DTYPE_INT64: number        = 5;
+const DBX_DTYPE_DOUBLE: number       = 6;
+const DBX_DTYPE_OREF: number         = 7;
+const DBX_DTYPE_NULL: number         = 10;
 
-const DBX_CMND_OPEN: number         = 1;
-const DBX_CMND_CLOSE: number        = 2;
-const DBX_CMND_NSGET: number        = 3;
-const DBX_CMND_NSSET: number        = 4;
+const DBX_CMND_OPEN: number          = 1;
+const DBX_CMND_CLOSE: number         = 2;
+const DBX_CMND_NSGET: number         = 3;
+const DBX_CMND_NSSET: number         = 4;
 
-const DBX_CMND_GSET: number         = 11;
-const DBX_CMND_GGET: number         = 12;
-const DBX_CMND_GNEXT: number        = 13;
-const DBX_CMND_GPREVIOUS: number    = 14;
-const DBX_CMND_GDELETE: number      = 15;
-const DBX_CMND_GDEFINED: number     = 16;
-const DBX_CMND_GINCREMENT: number   = 17;
-const DBX_CMND_GLOCK: number        = 18;
-const DBX_CMND_GUNLOCK: number      = 19
-const DBX_CMND_GMERGE: number       = 20
+const DBX_CMND_GSET: number          = 11;
+const DBX_CMND_GGET: number          = 12;
+const DBX_CMND_GNEXT: number         = 13;
+const DBX_CMND_GNEXTDATA: number     = 131;
 
-const DBX_CMND_FUNCTION: number     = 31;
+const DBX_CMND_GPREVIOUS: number     = 14;
+const DBX_CMND_GPREVIOUSDATA:number  = 141;
 
-const DBX_CMND_CCMETH: number       = 41;
-const DBX_CMND_CGETP: number        = 42;
-const DBX_CMND_CSETP: number        = 43;
-const DBX_CMND_CMETH: number        = 44;
-const DBX_CMND_CCLOSE: number       = 45;
+const DBX_CMND_GDELETE: number       = 15;
+const DBX_CMND_GDEFINED: number      = 16;
+const DBX_CMND_GINCREMENT: number    = 17;
+const DBX_CMND_GLOCK: number         = 18;
+const DBX_CMND_GUNLOCK: number       = 19
+const DBX_CMND_GMERGE: number        = 20
 
-const DBX_CMND_TSTART: number       = 61;
-const DBX_CMND_TLEVEL: number       = 62;
-const DBX_CMND_TCOMMIT: number      = 63;
-const DBX_CMND_TROLLBACK: number    = 64;
+const DBX_CMND_GNNODE: number        = 21;
+const DBX_CMND_GNNODEDATA: number    = 211;
+const DBX_CMND_GPNODE: number        = 22;
+const DBX_CMND_GPNODEDATA: number    = 221;
 
-const DBX_INPUT_BUFFER_SIZE: number = 3641145; // or 32768;
+const DBX_CMND_FUNCTION: number      = 31;
+
+const DBX_CMND_CCMETH: number        = 41;
+const DBX_CMND_CGETP: number         = 42;
+const DBX_CMND_CSETP: number         = 43;
+const DBX_CMND_CMETH: number         = 44;
+const DBX_CMND_CCLOSE: number        = 45;
+
+const DBX_CMND_GNAMENEXT: number     = 51;
+const DBX_CMND_GNAMEPREVIOUS: number = 52;
+
+const DBX_CMND_TSTART: number        = 61;
+const DBX_CMND_TLEVEL: number        = 62;
+const DBX_CMND_TCOMMIT: number       = 63;
+const DBX_CMND_TROLLBACK: number     = 64;
+
+const DBX_INPUT_BUFFER_SIZE: number  = 3641145; // or 32768;
 
 type async_callback = (error: boolean, result: string) => void;
 
-export class server {
+class server {
    type: string = "";
    path: string = "";
    host: string = "";
@@ -102,6 +123,7 @@ export class server {
    buffer_size = [0, 0, 0, 0, 0, 0, 0, 0];
    constructor(...args: any[]) {
       this.buffer[0] = new Uint8Array(DBX_INPUT_BUFFER_SIZE);
+      this.buffer_size[0] = DBX_INPUT_BUFFER_SIZE;
       return;
    }
 
@@ -163,6 +185,9 @@ export class server {
             }
             if (args[0].hasOwnProperty('password')) {
                this.password = args[0].password;
+            }
+            if (args[0].hasOwnProperty('namespace')) {
+               this.namespace = args[0].namespace;
             }
             if (args[0].hasOwnProperty('env_vars')) {
                if (typeof args[0].env_vars === 'object') {
@@ -756,7 +781,7 @@ export class server {
    }
 }
 
-export class mglobal {
+class mglobal {
    db: server;
    global_name: string = "";
    base_buffer: Uint8Array;
@@ -1026,7 +1051,7 @@ export class mglobal {
 
 }
 
-export class mclass {
+class mclass {
    db: server;
    class_name: string = "";
    oref: string = "";
@@ -1209,6 +1234,222 @@ export class mclass {
    }
 }
 
+class mcursor {
+   db: server;
+   context:number = 0;
+   globaldirectory:boolean = false;
+   multilevel:boolean = false;
+   getdata:boolean = false;
+   global_name:string = "";
+   base_buffer: Uint8Array;
+   base_offset:number = 0;
+   base_offset_first:number = 0;
+   base_offset_last:number = 0;
+   counter:number = 0;
+
+   constructor(db: server, ...args: any[]) {
+      this.db = db;
+      this.base_buffer = new Uint8Array(DBX_INPUT_BUFFER_SIZE);
+
+      this.reset(args);
+
+      return;
+   }
+
+   reset(args: any[]) {
+      let request = { command: 0, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+
+      this.base_offset = 0;
+      this.base_offset_last = 0;
+      this.base_offset = block_add_size(this.base_buffer, this.base_offset, this.base_offset, DBX_DSORT_DATA, DBX_DTYPE_INT);
+      this.base_offset = block_add_size(this.base_buffer, this.base_offset, this.base_buffer.length, DBX_DSORT_DATA, DBX_DTYPE_INT);
+      this.base_offset = block_add_size(this.base_buffer, this.base_offset, this.db.index, DBX_DSORT_DATA, DBX_DTYPE_INT);
+      this.global_name = "";
+      if (args.length > 1) {
+         if (args[1].hasOwnProperty('globaldirectory')) {
+            this.globaldirectory = args[1].globaldirectory;
+         }
+         if (args[1].hasOwnProperty('multilevel')) {
+            this.multilevel = args[1].multilevel;
+         }
+         if (args[1].hasOwnProperty('getdata')) {
+            this.getdata = args[1].getdata;
+         }
+      }
+      if (this.globaldirectory == true) {
+         if (args[0].hasOwnProperty('global')) {
+            this.global_name = args[0].global;
+            if (this.global_name === "^") {
+               this.global_name = "";
+            }
+            this.context = 9;
+         }
+      }
+      else {
+         if (args[0].hasOwnProperty('global')) {
+            this.global_name = args[0].global;
+            if (this.multilevel == true) {
+               this.context = 2;
+            }
+            else {
+               this.context = 1;
+            }
+         }
+      }
+      if (this.context == 1 || this.context == 2) {
+         this.base_offset = block_add_string(this.base_buffer, this.base_offset, this.global_name, this.global_name.length, DBX_DSORT_GLOBAL, DBX_DTYPE_STR);
+         this.base_offset_first = this.base_offset;
+         if (args[0].hasOwnProperty('key')) {
+            for (let keyn = 0; keyn < args[0].key.length; keyn++) {
+               this.base_offset_last = this.base_offset;
+               this.base_offset = block_add_string(this.base_buffer, this.base_offset, args[0].key[keyn], args[0].key[keyn].length, DBX_DSORT_DATA, DBX_DTYPE_STR);
+            }
+         }
+         this.base_offset = block_add_string(this.base_buffer, this.base_offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR)
+         add_head(this.base_buffer, 0, this.base_offset, request.command);
+      }
+      else if (this.context == 9) {
+         this.counter = 0;
+         this.base_offset_first = this.base_offset;
+         this.base_offset = block_add_string(this.base_buffer, this.base_offset, this.global_name, this.global_name.length, DBX_DSORT_GLOBAL, DBX_DTYPE_STR);
+         this.base_offset_last = this.base_offset;
+         this.base_offset = block_add_string(this.base_buffer, this.base_offset, this.counter.toString(), this.counter.toString().length, DBX_DSORT_DATA, DBX_DTYPE_INT);
+         this.base_offset = block_add_string(this.base_buffer, this.base_offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR)
+         add_head(this.base_buffer, 0, this.base_offset, request.command);
+      }
+      return;
+   }
+
+   execute() {
+      return null;
+   }
+   cleanup() {
+      return null;
+   }
+
+   next() {
+      return this.next_ex(1);
+   }
+
+   previous() {
+      return this.next_ex(-1);
+   }
+
+   next_ex(direction: number) {
+      let offset = 0;
+      let request = { command: 0, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let result = null;
+
+      if (this.db.init === 0) {
+         return null;
+      }
+
+      let bidx = this.db.get_buffer();
+      if (this.context === 1) {
+         if (this.getdata) {
+            if (direction === -1) {
+               request.command = DBX_CMND_GPREVIOUSDATA;
+            }
+            else {
+               request.command = DBX_CMND_GNEXTDATA;
+            }
+         }
+         else {
+            if (direction === -1) {
+               request.command = DBX_CMND_GPREVIOUS;
+            }
+            else {
+               request.command = DBX_CMND_GNEXT;
+            }
+         }
+
+         offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
+         this.db.buffer[bidx][4] = request.command;
+         const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+         get_result(this.db.buffer[bidx], pdata, request);
+         if (request.error_message === "") {
+            if (this.getdata) {
+               this.base_offset = block_add_string(this.base_buffer, this.base_offset_last, request.result_data.key, request.result_data.key.length, DBX_DSORT_DATA, DBX_DTYPE_STR);
+               if (request.result_data.key != "") {
+                  result = request.result_data;
+               }
+            }
+            else {
+               this.base_offset = block_add_string(this.base_buffer, this.base_offset_last, request.result_data, request.result_data.length, DBX_DSORT_DATA, DBX_DTYPE_STR);
+               if (request.result_data != "") {
+                  result = request.result_data;
+               }
+            }
+            this.base_offset = block_add_string(this.base_buffer, this.base_offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR)
+            add_head(this.base_buffer, 0, this.base_offset, request.command);
+         }
+         this.db.release_buffer(bidx);
+      }
+      else if (this.context === 2) {
+         if (this.getdata) {
+            if (direction === -1) {
+               request.command = DBX_CMND_GPNODEDATA;
+            }
+            else {
+               request.command = DBX_CMND_GNNODEDATA;
+            }
+         }
+         else {
+            if (direction === -1) {
+               request.command = DBX_CMND_GPNODE;
+            }
+            else {
+               request.command = DBX_CMND_GNNODE;
+            }
+         }
+         offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
+         this.db.buffer[bidx][4] = request.command;
+         const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+         get_result(this.db.buffer[bidx], pdata, request);
+         if (request.error_message === "") {
+            if (request.result_data.hasOwnProperty('key')) {
+               if (request.result_data.key.length > 0 && request.result_data.key[0].length > 0) {
+                  result = request.result_data;
+                  this.base_offset = this.base_offset_first;
+                  for (let keyn = 0; keyn < request.result_data.key.length; keyn++) {
+                     this.base_offset = block_add_string(this.base_buffer, this.base_offset, request.result_data.key[keyn], request.result_data.key[keyn].length, DBX_DSORT_DATA, DBX_DTYPE_STR);
+                  }
+               }
+            }
+
+            this.base_offset = block_add_string(this.base_buffer, this.base_offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR)
+            add_head(this.base_buffer, 0, this.base_offset, request.command);
+         }
+         this.db.release_buffer(bidx);
+      }
+      else if (this.context === 9) {
+         if (direction === -1) {
+            request.command = DBX_CMND_GNAMEPREVIOUS;
+         }
+         else {
+            request.command = DBX_CMND_GNAMENEXT;
+         }
+         offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
+         this.db.buffer[bidx][4] = request.command;
+         const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+         get_result(this.db.buffer[bidx], pdata, request);
+         if (request.error_message === "") {
+            this.base_offset = block_add_string(this.base_buffer, this.base_offset_first, request.result_data, request.result_data.length, DBX_DSORT_DATA, DBX_DTYPE_STR);
+            if (request.result_data != "") {
+               result = request.result_data;
+            }
+            this.counter++;
+            this.base_offset = block_add_string(this.base_buffer, this.base_offset, this.counter.toString(), this.counter.toString().length, DBX_DSORT_DATA, DBX_DTYPE_INT);
+            this.base_offset = block_add_string(this.base_buffer, this.base_offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR)
+            add_head(this.base_buffer, 0, this.base_offset, request.command);
+         }
+         this.db.release_buffer(bidx);
+      }
+
+      return result;
+   }
+}
+
 async function async_command(db: server, buffer: Uint8Array, buffer_size: number, request: { command: number, argc: number, async: number, result_data: string, error_message: string, type: number }, context: number, callback: async_callback) {
    let promise = new Promise((resolve, reject) => {
       const pdata = dbx.command(buffer, buffer_size, request.command, context);
@@ -1263,7 +1504,7 @@ function pack_arguments(buffer: Uint8Array, offset: number, index: number, args:
    return offset;
 }
 
-function get_result(pbuffer: Uint8Array, pdata: Uint8Array, request: { command: number, argc: number, async: number, result_data: string, error_message: string, type: number }): string {
+function get_result(pbuffer: Uint8Array, pdata: Uint8Array, request: { command: number, argc: number, async: number, result_data: any, error_message: string, type: number }): any {
    let data_properties = { len: 0, type: 0, sort: 0 };
 
    block_get_size(pbuffer, 0, data_properties);
@@ -1275,6 +1516,9 @@ function get_result(pbuffer: Uint8Array, pdata: Uint8Array, request: { command: 
       }
       else {
          request.error_message = pdata;
+         if (request.error_message === "") {
+            request.error_message = "Database Error";
+         }
       }
    }
    else {
@@ -1283,6 +1527,46 @@ function get_result(pbuffer: Uint8Array, pdata: Uint8Array, request: { command: 
       }
       else {
          request.result_data = pdata
+      }
+   }
+   if (request.command === DBX_CMND_GNEXTDATA || request.command === DBX_CMND_GPREVIOUSDATA) {
+      let offset = 5;
+      block_get_size(pbuffer, offset, data_properties);
+      offset += 5;
+      let data = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString();
+      offset += data_properties.len;
+      block_get_size(pbuffer, offset, data_properties);
+      offset += 5;
+      let key = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString();
+      request.result_data = { "key": key, "data": data };
+   }
+   else if (request.command === DBX_CMND_GNNODE || request.command === DBX_CMND_GNNODEDATA || request.command === DBX_CMND_GPNODE || request.command === DBX_CMND_GPNODEDATA) {
+      let key = "";
+      let offset = 5;
+      block_get_size(pbuffer, offset, data_properties);
+      if (data_properties.sort != DBX_DSORT_EOD) {
+         offset += 5;
+         let data = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString();
+         offset += data_properties.len;
+         if (request.command === DBX_CMND_GNNODEDATA || request.command === DBX_CMND_GPNODEDATA) {
+            request.result_data = { "data": data, "key": [] };
+         }
+         else {
+            request.result_data = { "key": [] };
+         }
+         for (let keyn = 0; ; keyn++) {
+            block_get_size(pbuffer, offset, data_properties);
+            offset += 5;
+            if (data_properties.sort === DBX_DSORT_EOD) {
+               break;
+            }
+            key = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString();
+            offset += data_properties.len;
+            request.result_data.key.push(key);
+            if (keyn > 5) {
+               break;
+            }
+         }
       }
    }
    request.type = data_properties.type;
@@ -1324,7 +1608,7 @@ function add_head(buffer: Uint8Array, offset: number, data_len: number, cmnd: nu
 
 function block_get_size(buffer: Uint8Array, offset: number, data_properties: {len: number; type: number; sort: number}) {
    data_properties.len = ((buffer[offset + 0]) | (buffer[offset + 1] << 8) | (buffer[offset + 2] << 16) | (buffer[offset + 3] << 24));
-   data_properties.sort = buffer[4];
+   data_properties.sort = buffer[offset + 4];
    data_properties.type = data_properties.sort % 20;
    data_properties.sort = Math.floor(data_properties.sort / 20);
    return data_properties;
@@ -1333,5 +1617,6 @@ function block_get_size(buffer: Uint8Array, offset: number, data_properties: {le
 export {
    server,
    mglobal,
-   mclass
+   mclass,
+   mcursor
 };
