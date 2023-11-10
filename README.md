@@ -1,6 +1,6 @@
 # mg-dbx-napi
 
-###Note: This repository is currently under maintenance - please bear with us!
+**Note: This repository is currently under maintenance - please bear with us!**
 
 High speed Synchronous and Asynchronous access to InterSystems Cache/IRIS and YottaDB from Node.js or Bun.
 
