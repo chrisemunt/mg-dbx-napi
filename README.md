@@ -137,7 +137,7 @@ To use a server TCP port other than 7041, specify it in the start-up command (as
 
 Most **mg-dbx-napi** methods are capable of operating either synchronously or asynchronously. For an operation to complete asynchronously, simply supply a suitable callback as the last argument in the call.
 
-The first step is to include the **mg-dbx-napi** classes to your JavaScript project.  For example:
+The first step is to include the **mg-dbx-napi** classes in your JavaScript project.  For example:
 
        import {server, mglobal, mclass, mcursor} from 'mg-dbx-napi';
 
