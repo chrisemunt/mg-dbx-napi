@@ -3,7 +3,7 @@
 High speed Synchronous and Asynchronous access to InterSystems Cache/IRIS and YottaDB from Node.js or Bun.
 
 Chris Munt <cmunt@mgateway.com>  
-10 November 2023, MGateway Ltd [http://www.mgateway.com](http://www.mgateway.com)
+11 November 2023, MGateway Ltd [http://www.mgateway.com](http://www.mgateway.com)
 
 * Verified to work with Node.js and the Bun JavaScript engine.
 * Two connectivity models to the InterSystems or YottaDB database are provided: High performance via the local database API or network based.
@@ -11,46 +11,92 @@ Chris Munt <cmunt@mgateway.com>
 
 Contents
 
-* [Overview](#overview)
+* [What Is mg-dbx-napi?](#whatis)
 * [Installing mg-dbx-napi](#install)
+* [Using mg-dbx-napi](#using)
 * [Connecting to the database](#connect)
 * [Invocation of database commands](#dbcommands)
 * [Invocation of database functions](#dbfunctions)
 * [Cursor based data retrieval](#cursors)
 * [Transaction Processing](#tprocessing)
 * [Direct access to InterSystems classes (IRIS and Cache)](#dbclasses)
+* [Background and History of This Package](#overview)
 * [License](#license)
 
-## <a name="overview">Overview</a>
+## <a name="whatis">What Is *mg-dbx-napi*?</a>
 
-This solution provides **Node.js** and **Bun** applications with high-performance access to InterSystems database products and the YottaDB database.
-
-**Node.js** was released in 2009 and is based on the Google V8 JavaScript engine.  It has always been possible to extend the functionality of Node.js by creating add-on modules that work directly to the V8 C++ API.  With Node.js version 8, the third iteration of a new C++ API was released - Node-API.  This API is intrinsically part of Node.js and, as such, is independent of the underlying JavaScript implementation.  A key design goal of this new API was that it should be Application Binary Interface (ABI) stable across versions of Node.js.  In other words, it should not be necessary to recompile add-on modules based on Node-API when the underlying Node.js platform is upgraded to a new version.  By contrast, Node.js add-ons based on the native V8 API need to be recompiled every time the underlying Node.js/V8 engine is upgraded.
-
-2022 saw the release of a new server-oriented JavaScript engine in beta form - **Bun**.  Bun is based on Apple's JavaScriptCore engine which is used in the Safari web browser.  Bun promised better performance than Node.js - up to 3x faster has been claimed.  In order to hit the ground running, Bun natively implements hundreds of Node.js APIs, including around 90% of the Node-API functions.  Therefore, in theory, Bun should be able to use add-on modules developed for Node.js provided they are based on Node-API.
-
-**mg-dbx-napi** is based on Node-API and is designed to work with both Node.js and Bun.  It offers applications the same functionality as the earlier [mg-dbx](https://github.com/chrisemunt/mg-dbx) module for Node.js which is based on the native V8 API.
-
-**mg-dbx-napi** provides us with the opportunity to explore a high-performance JavaScript engine (Bun) working with the high-performance databases provided by InterSystems and YottaDB but in a way that is compatible with our current **mg-dbx** add-on solution for Node.js.  We will be writing more about this in due course!
-
-Those familiar with **mg-dbx** will know that applications engage directly with the functionality provided by the **mg-dbx.node** add-on.  With **mg-dbx-napi.node**, a JavaScript _shim_ is supplied for both Node.js and Bun to provide a common application interface for the two JavaScript engines.  **mg-dbx-napi.node** is itself an add-on written in C++ and manages the interface to the database and is common to both Node.js and Bun.
-
-The Node.js _shim_ is provided as a JavaScript module:
-
-       MyNodeApplication.js -> mg_dbx_napi.js -> mg-dbx-napi.node
-
-The Bun _shim_ is provided as a TypeScript module:
-
-       MyBunApplication.js -> mg_dbx_napi.ts -> mg-dbx-napi.node
-
+This package provides **Node.js** and **Bun** applications with extremely high-performance access to InterSystems database products and the YottaDB database.
 
 ## <a name="install">Installing mg-dbx-napi</a>
 
-Assuming that Node.js is already installed and a C++ compiler is available to the installation process:
-
        npm install mg-dbx-napi
 
-This command will create the **mg-dbx-napi** addon (*mg-dbx-napi.node*).
+
+## <a name="using">Using mg-dbx-napi</a>
+
+*mg-dbx-napi* is loaded into a Node.js or Bun.js script as follows:
+
+        import {server, mglobal, mclass, mcursor} from 'mg-dbx-napi';
+
+If you don't require all the classes, just import the ones you need, eg:
+
+        import {server, mglobal} from 'mg-dbx-napi';
+
+
+Notes:
+
+- *mg-dbx-napi* is compatible with both Node.js (version 20 and later) and Bun.js (version 1.0 and later).
+
+- Pre-compiled versions of the *mg-dbx-napi.node* add-on are included within the installed package, for the following platforms:
+
+  - Windows 64-bit
+  - Linux x64
+  - Linux ARM64
+
+The two Linux versions have been compiled using version 2.31 of the GNU C Library, so they will work with the following Linux distributions and their later versions:
+
+  - Ubuntu 20.04
+  - Debian 11 (Bullseye)
+  - Suse Linux 15-SP5
+  - Redhat 9.2
+  - CentOS v9
+  - Raspberry Pi OS 2023-05-03/11
+
+  If you are using a different Linux distribution, check its C Library version using:
+
+        ldd --version
+
+- *mg-dbx-napi* will automatically detect your operating system and architecture and load the
+appropriate add-on version and intermediate interface shim module.
+
+
+- If you want to use *mg-dbx-napi* on a platform other than those for which pre-compiled add-on versions are provided, please contact Chris Munt <cmunt@mgateway.com>  
+
+
+## <a name="databases">Supported Databases</a>
+
+*mg-dbx-napi* is designed for use with the following databases:
+
+- [InterSystems IRIS](https://www.intersystems.com/uk/data-platform/)
+- [InterSystems Cache](https://www.intersystems.com/uk/cache/)
+- [YottaDB](https://yottadb.com/)
+
+*mg-dbx-napi* can connect in two ways to these databases:
+
+- networked connection, where the Node.js/Bun.js system and database can be on separate servers
+- in-process API connection, where the Node.js/Bun.js system and database reside on the same physical server
+
+Networked connections provide the most all-round platform compatibility (eg Node.js running on a Windows system can connect to YottaDB which only runs on Linux), and highest levels of security.  In order to use a networked connection, you need to install our DB Superserver on the database system: see next section below.
+
+The in-process API connection mode provides the very highest levels of performance, reaching near in-memory performance access to the respective database persistent storage.  Note that in this mode, you need to be aware of the platform availability of the database products:
+
+- InterSystems' Cache and IRIS database versions are available for both Windows and Linux (x64 and ARM64)
+- YottaDB is only available on Linux (x64 and ARM64)
+
+The in-process API connection does **not** require installation of our DB Superserver on the database system, unless:
+
+- you want to use SQL to access the data held on the database
+- you want to use the Merge command with the YottaDB database
 
 
 ### Installing the M support routines (also known as the DB Superserver)
@@ -135,6 +181,26 @@ To use a server TCP port other than 7041, specify it in the start-up command (as
 
 ## <a name="connect">Connecting to the database</a>
 
+Example:
+
+        import {server, mglobal} from 'mg-dbx-napi';
+        let db = new server();
+        db.open({
+          type: "IRIS",
+          path:"/opt/IRIS20181/mgr",
+          username: "_SYSTEM",
+          password: "SYS",
+          namespace: "USER"
+        });
+
+        let person = new mglobal(db, "Person");
+        let name = person.get(1);
+
+        // ..do more stuff, then finally:
+
+        db.close();
+
+
 Most **mg-dbx-napi** methods are capable of operating either synchronously or asynchronously. For an operation to complete asynchronously, simply supply a suitable callback as the last argument in the call.
 
 The first step is to include the **mg-dbx-napi** classes in your JavaScript project.  For example:
@@ -213,21 +279,17 @@ Assuming IRIS is accessed via **localhost** listening on TCP port **7041**
 
 Assuming an 'out of the box' YottaDB installation under **/usr/local/lib/yottadb/r138**.
 
-           const envvars = {
-              ydb_dir: '/root/.yottadb',
-              ydb_rel: 'r1.38_x86_64',
-              ydb_gbldir: '/root/.yottadb/r1.38_x86_64/g/yottadb.gld',
-              ydb_routines: '/root/.yottadb/r1.38_x86_64/o*(/root/.yottadb/r1.38_x86_64/r /root/.yottadb/r) /usr/local/lib/yottadb/r138/libyottadbutil.so',
-              ydb_ci: '/usr/local/lib/yottadb/r138/zmgsi.ci'
-           }
-
            var open = db.open({
                type: "YottaDB",
                path: "/usr/local/lib/yottadb/r138",
-               env_vars: envvars
+               env_vars: {
+                 ydb_gbldir: '/root/.yottadb/r1.38_x86_64/g/yottadb.gld',
+                 ydb_routines: '/root/.yottadb/r1.38_x86_64/o*(/root/.yottadb/r1.38_x86_64/r /root/.yottadb/r) /usr/local/lib/yottadb/r138/libyottadbutil.so',
+                 ydb_ci: '/usr/local/lib/yottadb/r138/zmgsi.ci'
+               }
              });
 
-* Note that (as with **mg-dbx**) you can still supply the environment variables as a string of _name=value_ pairs each separated by a linefeed character and terminated by a double linefeed.
+Note that the actual YottaDB environment variables that you should use will depend on your YottaDB configuration, and, in particular, the Globals and Routines that you may need to access from Node.js or Bun.js.
 
 ##### Network based connectivity
 
@@ -284,14 +346,7 @@ mglobal container objects can be created as described in the [Connecting to the 
 
 Example (using a global named "Person"):
 
-Node.js:
-
-       let person = new dbx.mglobal(db, "Person");
-
-Bun:
-
        let person = new mglobal(db, "Person");
-
 
 ### Set a record
 
@@ -718,7 +773,7 @@ Calculate person's age at a particular date:
 
 ### Reusing an object container
 
-Once created, it is possible to reuse containers holding previously instantiated objects using the **reset()** method.  Using this technique helps to reduce memory usage in the Bun environment.
+Once created, it is possible to reuse containers holding previously instantiated objects using the **reset()** method.  Using this technique helps to reduce memory usage in the JavaScript environment.
 
 Example 1 Reset a container to hold a new instance:
 
@@ -728,6 +783,28 @@ Example 2 Reset a container to hold an existing instance (object %Id of 2):
 
        person.reset("User.Person", "%OpenId", 2);
 
+
+## <a name="background">Background and History of This Package</a>
+
+**Node.js** was released in 2009 and is based on the Google V8 JavaScript engine.  It has always been possible to extend the functionality of Node.js by creating add-on modules that work directly to the V8 C++ API.  With Node.js version 8, the third iteration of a new C++ API was released - Node-API.  This API is intrinsically part of Node.js and, as such, is independent of the underlying JavaScript implementation.  A key design goal of this new API was that it should be Application Binary Interface (ABI) stable across versions of Node.js.  In other words, it should not be necessary to recompile add-on modules based on Node-API when the underlying Node.js platform is upgraded to a new version.  By contrast, Node.js add-ons based on the native V8 API need to be recompiled every time the underlying Node.js/V8 engine is upgraded.
+
+2022 saw the release of a new server-oriented JavaScript engine in beta form - **Bun**.  Bun is based on Apple's JavaScriptCore engine which is used in the Safari web browser.  Bun promised better performance than Node.js - up to 3x faster has been claimed.  In order to hit the ground running, Bun natively implements hundreds of Node.js APIs, including around 90% of the Node-API functions.  Therefore, in theory, Bun should be able to use add-on modules developed for Node.js provided they are based on Node-API.
+
+**mg-dbx-napi** is based on Node-API and is designed to work with both Node.js and Bun.  It offers applications the same functionality as the earlier [mg-dbx](https://github.com/chrisemunt/mg-dbx) module for Node.js which is based on the native V8 API.
+
+**mg-dbx-napi** provides us with the opportunity to explore a high-performance JavaScript engine (Bun) working with the high-performance databases provided by InterSystems and YottaDB but in a way that is compatible with our current **mg-dbx** add-on solution for Node.js.
+
+Those familiar with **mg-dbx** will know that applications engage directly with the functionality provided by the **mg-dbx.node** add-on.  With **mg-dbx-napi.node**, a JavaScript _shim_ is supplied for both Node.js and Bun to provide a common application interface for the two JavaScript engines.  **mg-dbx-napi.node** is itself an add-on written in C++ and manages the interface to the database and is common to both Node.js and Bun.
+
+The Node.js _shim_ is provided as a JavaScript module:
+
+       MyNodeApplication.js -> mg_dbx_napi.js -> mg-dbx-napi.node
+
+The Bun _shim_ is provided as a TypeScript module:
+
+       MyBunApplication.js -> mg_dbx_napi.ts -> mg-dbx-napi.node
+
+However, the packaging included within this repository means that it will automatically detect and load the correct version of both the shim module and add-on module for your operating system and architecture.
 
 ## <a name="license">License</a>
 
