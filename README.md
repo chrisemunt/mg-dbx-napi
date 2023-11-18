@@ -3,7 +3,7 @@
 High speed Synchronous and Asynchronous access to InterSystems Cache/IRIS and YottaDB from Node.js or Bun.
 
 Chris Munt <cmunt@mgateway.com>  
-11 November 2023, MGateway Ltd [http://www.mgateway.com](http://www.mgateway.com)
+18 November 2023, MGateway Ltd [http://www.mgateway.com](http://www.mgateway.com)
 
 * Verified to work with Node.js and the Bun JavaScript engine.
 * Two connectivity models to the InterSystems or YottaDB database are provided: High performance via the local database API or network based.
@@ -20,6 +20,7 @@ Contents
 * [Cursor based data retrieval](#cursors)
 * [Transaction Processing](#tprocessing)
 * [Direct access to InterSystems classes (IRIS and Cache)](#dbclasses)
+* [Direct access to SQL: MGSQL and InterSystems SQL (IRIS and Cache)](#dbsql)
 * [Background and History of This Package](#overview)
 * [License](#license)
 
@@ -784,6 +785,102 @@ Example 2 Reset a container to hold an existing instance (object %Id of 2):
        person.reset("User.Person", "%OpenId", 2);
 
 
+## <a name="dbsql">Direct access to SQL: MGSQL and InterSystems SQL (IRIS and Cache)</a>
+
+**mg-dbx-napi** provides direct access to the Open Source MGSQL engine ([https://github.com/chrisemunt/mgsql](https://github.com/chrisemunt/mgsql)) and InterSystems SQL (IRIS and Cache).
+
+* Note: In order to use this facility the M support routines should be installed (**%zmgsi** and **%zmgsis**).
+
+### Specifying the SQL query
+
+The first task is to specify the SQL query.
+
+       query = new mcursor(db, {sql: <sql_statement>[, type: <sql_engine>]);
+Or:
+
+       query = db.sql({sql: <sql_statement>[, type: <sql_engine>]);
+
+Example 1 (using MGSQL):
+
+       query = db.sql({sql: "select * from person"});
+
+
+Example 2 (using InterSystems SQL):
+
+       query = db.sql({sql: "select * from SQLUser.person", type: "Cache"});
+
+
+### Execute an SQL query
+
+       var result = <query>.execute();
+
+The result of query execution is an object containing the return code and state and any associated error message.  The familiar ODBC return and status codes are used.
+
+Example 1 (successful execution):
+
+       {
+           "sqlcode": 0,
+           "sqlstate": "00000",
+           "columns": [
+                         {
+                            "name": "Number",
+                            "type": "INTEGER"
+                         },
+                           "name": "Name",
+                            "type": "VARCHAR"
+                         },
+                           "name": "DateOfBirth",
+                            "type": "DATE"
+                         }
+                      ]
+       }
+
+
+Example 2 (unsuccessful execution):
+
+       {
+           "sqlcode": -1,
+           "sqlstate": "HY000",
+           "error": "no such table 'person'"
+       }
+
+
+### Traversing the returned dataset (SQL 'select' queries)
+
+In result-set order:
+
+       result = query.next();
+
+In reverse result-set order:
+
+       result = query.previous();
+
+In all cases these methods will return 'null' when the end of the dataset is reached.
+
+Example:
+
+       while ((row = query.next()) !== null) {
+          console.log("row: " + JSON.stringify(result, null, '\t'));
+       }
+
+The output for each iteration is a row of the generated SQL result-set.  For example:
+
+       {
+           "number": 1,
+           "name": "John Smith",
+       }
+
+### SQL cleanup
+
+For 'select' queries that generate a result-set it is good practice to invoke the 'cleanup' method at the end to delete the result-set held in the database.
+
+       var result = <query>.cleanup();
+
+### Reset an SQL container with a new SQL Query
+
+       <query>.reset({sql: <sql_statement>[, type: <sql_engine>]);
+
+
 ## <a name="background">Background and History of This Package</a>
 
 **Node.js** was released in 2009 and is based on the Google V8 JavaScript engine.  It has always been possible to extend the functionality of Node.js by creating add-on modules that work directly to the V8 C++ API.  With Node.js version 8, the third iteration of a new C++ API was released - Node-API.  This API is intrinsically part of Node.js and, as such, is independent of the underlying JavaScript implementation.  A key design goal of this new API was that it should be Application Binary Interface (ABI) stable across versions of Node.js.  In other words, it should not be necessary to recompile add-on modules based on Node-API when the underlying Node.js platform is upgraded to a new version.  By contrast, Node.js add-ons based on the native V8 API need to be recompiled every time the underlying Node.js/V8 engine is upgraded.
@@ -845,3 +942,7 @@ Unless required by applicable law or agreed to in writing, software distributed 
 
 * Introduce support for the mcursor class
 
+### v1.3.5 (18 November 2023)
+
+* Introduce support for direct SQL access.
+* Correct a fault in the cursor operation to return a global directory listing from YottaDB.
