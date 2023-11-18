@@ -35,11 +35,12 @@ if (['win', 'arm64', 'x64'].includes(arch)) {
 else {
    // throw an error - platform not supported
 }
+
 //const dbx = require('./mg-dbx-napi.node');
 
 const DBX_VERSION_MAJOR: number      = 1;
-const DBX_VERSION_MINOR: number      = 2;
-const DBX_VERSION_BUILD: number      = 4;
+const DBX_VERSION_MINOR: number      = 3;
+const DBX_VERSION_BUILD: number      = 5;
 
 const DBX_DSORT_INVALID: number      = 0;
 const DBX_DSORT_DATA: number         = 1;
@@ -100,6 +101,13 @@ const DBX_CMND_TLEVEL: number        = 62;
 const DBX_CMND_TCOMMIT: number       = 63;
 const DBX_CMND_TROLLBACK: number     = 64;
 
+const DBX_CMND_SQLEXEC: number       = 71;
+const DBX_CMND_SQLROW: number        = 72;
+const DBX_CMND_SQLCLEANUP: number    = 73;
+
+const DBX_SQL_MGSQL: number          = 1;
+const DBX_SQL_ISCSQL: number         = 2;
+
 const DBX_INPUT_BUFFER_SIZE: number  = 3641145; // or 32768;
 
 type async_callback = (error: boolean, result: string) => void;
@@ -119,6 +127,8 @@ class server {
    timeout: number = 60;
    init: number = 0;
    index: number = 0;
+   sql_index: number = 0;
+   utf16: boolean = false;
    buffer = [0, 0, 0, 0, 0, 0, 0, 0];
    buffer_size = [0, 0, 0, 0, 0, 0, 0, 0];
    constructor(...args: any[]) {
@@ -169,7 +179,7 @@ class server {
       if (args.length > 0) {
          if (typeof args[0] === 'object') {
             if (args[0].hasOwnProperty('type')) {
-               this.type = args[0].type;
+               this.type = args[0].type.toLowerCase();;
             }
             if (args[0].hasOwnProperty('path')) {
                this.path = args[0].path;
@@ -707,6 +717,11 @@ class server {
       }
 
       return request.result_data;
+   }
+
+   sql(sql_query: JSON): mcursor {
+      const query = new mcursor(this, sql_query);
+      return query;
    }
 
    benchmark(...args: any[]): string {
@@ -1247,6 +1262,15 @@ class mcursor {
    base_offset_last:number = 0;
    counter:number = 0;
 
+   sql_query:string = ""
+   sql_type:number = 0;
+   sql_no:number = 0;
+   sql_no_cols:number = 0;
+   sql_row_no:string = "";
+   sqlcode:number = 0;
+   sqlstate:string = "00000";
+   sqlcols:Array = [];
+
    constructor(db: server, ...args: any[]) {
       this.db = db;
       this.base_buffer = new Uint8Array(DBX_INPUT_BUFFER_SIZE);
@@ -1295,6 +1319,19 @@ class mcursor {
                this.context = 1;
             }
          }
+         else if (args[0].hasOwnProperty('sql')) {
+            this.sql_query = args[0].sql;
+            this.sql_type = DBX_SQL_MGSQL;
+            if (args[0].hasOwnProperty('type')) {
+               let type = args[0].type.toLowerCase();
+               if (type === 'intersystems' || type === 'cache' || type === 'iris') {
+                  this.sql_type = DBX_SQL_ISCSQL;
+               }
+            }
+            this.base_offset_first = this.base_offset;
+            this.context = 11;
+            this.sql_no = ++this.db.sql_index;
+         }
       }
       if (this.context == 1 || this.context == 2) {
          this.base_offset = block_add_string(this.base_buffer, this.base_offset, this.global_name, this.global_name.length, DBX_DSORT_GLOBAL, DBX_DTYPE_STR);
@@ -1320,11 +1357,103 @@ class mcursor {
       return;
    }
 
-   execute() {
-      return null;
+   execute(...args:any): any {
+      let offset = 0;
+      let context = 1; // binary response
+      let request = { command: DBX_CMND_SQLEXEC, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+
+      if (this.db.init === 0) {
+         return "";
+      }
+
+      this.sql_no_cols = 0;
+      this.sql_row_no = "";
+      this.sqlcode = 0;
+      this.sqlstate = "00000";
+
+      let params = "";
+      let routine = "";
+      if (this.db.utf16 === true) {
+         params = params + ";utf16";
+      }
+      if (this.sql_type === DBX_SQL_ISCSQL) {
+         routine = "sqleisc^%zmgsis";
+      }
+      else {
+         routine = "sqlemg^%zmgsis";
+      }
+
+      if (this.db.type === 'yottadb') {
+         routine = "sqlemg^%zmgsis";
+      }
+
+      request.argc = args.length;
+      if (request.argc > 0) {
+         if (typeof args[request.argc - 1] === "function") {
+            request.async = 1;
+            request.argc--;
+         }
+      }
+
+      let bidx = this.db.get_buffer();
+      offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset_first);
+      offset = block_add_string(this.db.buffer[bidx], offset, routine, routine.length, DBX_DSORT_DATA, DBX_DTYPE_STR);
+      offset = block_add_string(this.db.buffer[bidx], offset, this.sql_no.toString(), this.sql_no.toString().length, DBX_DSORT_DATA, DBX_DTYPE_INT);
+      offset = block_add_string(this.db.buffer[bidx], offset, this.sql_query, this.sql_query.length, DBX_DSORT_DATA, DBX_DTYPE_STR);
+      offset = block_add_string(this.db.buffer[bidx], offset, params, params.length, DBX_DSORT_DATA, DBX_DTYPE_STR);
+      offset = block_add_string(this.db.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR)
+      add_head(this.db.buffer[bidx], 0, offset, DBX_CMND_FUNCTION); // on the M side this is a function call
+
+      if (request.async) {
+         async_command(this, this.db.buffer[bidx], offset, request, context, args[request.argc]);
+         return null;
+      }
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, context);
+      get_result(this.db.buffer[bidx], pdata, request);
+
+      this.sqlcols.length = 0;
+      if (request.result_data.hasOwnProperty('columns')) {
+         this.sql_no_cols = request.result_data.columns.length;
+         for (let n = 0; n < this.sql_no_cols; n++) {
+            this.sqlcols.push(request.result_data.columns[n]);
+         }
+      }
+      this.db.release_buffer(bidx);
+
+      return request.result_data;
    }
-   cleanup() {
-      return null;
+
+   cleanup(): any {
+      let offset = 0;
+      let context = 1; // binary response
+      let request = { command: DBX_CMND_SQLCLEANUP, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+
+      if (this.db.init === 0) {
+         return "";
+      }
+
+      this.sql_no_cols = 0;
+      this.sql_row_no = "";
+      this.sqlcode = 0;
+      this.sqlstate = "00000";
+
+      let params = "";
+      let routine = "sqldel^%zmgsis";
+      params = params + ";utf16";
+
+      let bidx = this.db.get_buffer();
+      offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset_first);
+      offset = block_add_string(this.db.buffer[bidx], offset, routine, routine.length, DBX_DSORT_DATA, DBX_DTYPE_STR);
+      offset = block_add_string(this.db.buffer[bidx], offset, this.sql_no.toString(), this.sql_no.toString().length, DBX_DSORT_DATA, DBX_DTYPE_INT);
+      offset = block_add_string(this.db.buffer[bidx], offset, params, params.length, DBX_DSORT_DATA, DBX_DTYPE_STR);
+      offset = block_add_string(this.db.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR)
+      add_head(this.db.buffer[bidx], 0, offset, DBX_CMND_FUNCTION); // on the M side this is a function call
+
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, context);
+      get_result(this.db.buffer[bidx], pdata, request);
+      this.db.release_buffer(bidx);
+
+      return request.result_data;
    }
 
    next() {
@@ -1442,6 +1571,53 @@ class mcursor {
             this.base_offset = block_add_string(this.base_buffer, this.base_offset, this.counter.toString(), this.counter.toString().length, DBX_DSORT_DATA, DBX_DTYPE_INT);
             this.base_offset = block_add_string(this.base_buffer, this.base_offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR)
             add_head(this.base_buffer, 0, this.base_offset, request.command);
+         }
+         this.db.release_buffer(bidx);
+      }
+      else if (this.context === 11) {
+         let context = 1; // binary response
+
+         request.command = DBX_CMND_SQLROW;
+
+         this.sqlcode = 0;
+         this.sqlstate = "00000";
+
+         let params = "";
+         let routine = "";
+         if (direction === 1) {
+            params = "+1"
+         }
+         else {
+            params = "+1"
+         }
+         if (this.db.utf16 === true) {
+            params = params + ";utf16";
+         }
+         routine = "sqlrow^%zmgsis";
+
+         let bidx = this.db.get_buffer();
+         offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset_first);
+         offset = block_add_string(this.db.buffer[bidx], offset, routine, routine.length, DBX_DSORT_DATA, DBX_DTYPE_STR);
+         offset = block_add_string(this.db.buffer[bidx], offset, this.sql_no.toString(), this.sql_no.toString().length, DBX_DSORT_DATA, DBX_DTYPE_INT);
+         offset = block_add_string(this.db.buffer[bidx], offset, this.sql_row_no, this.sql_row_no.length, DBX_DSORT_DATA, DBX_DTYPE_STR);
+         offset = block_add_string(this.db.buffer[bidx], offset, params, params.length, DBX_DSORT_DATA, DBX_DTYPE_STR);
+         offset = block_add_string(this.db.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR)
+         add_head(this.db.buffer[bidx], 0, offset, DBX_CMND_FUNCTION); // on the M side this is a function call
+
+         const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, context);
+         get_result(this.db.buffer[bidx], pdata, request);
+         if (request.error_message === "") {
+            if (request.result_data != "") {
+               if (request.result_data.hasOwnProperty('sql_row_no')) {
+                  this.sql_row_no = request.result_data.sql_row_no;
+               }
+               result = {};
+               if (request.result_data.hasOwnProperty('values') && request.result_data.values.length === this.sql_no_cols) {
+                  for (let n = 0; n < this.sql_no_cols; n++) {
+                     Object.defineProperty(result, this.sqlcols[n].name, { "value": request.result_data.values[n], enumerable: true, writeble: true, configurable: true });
+                  }
+               }
+            }
          }
          this.db.release_buffer(bidx);
       }
@@ -1566,6 +1742,58 @@ function get_result(pbuffer: Uint8Array, pdata: Uint8Array, request: { command: 
             if (keyn > 5) {
                break;
             }
+         }
+      }
+   }
+   else if (request.command === DBX_CMND_SQLEXEC) {
+      let col_data = [];
+      let offset = 5;
+      block_get_size(pbuffer, offset, data_properties);
+      offset += 4;
+      block_get_size(pbuffer, offset, data_properties);
+      //console.log("mg_dbx_napi.js SQL data properties => ", data_properties);
+      offset += 5;
+      let data = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString();
+      offset += data_properties.len;
+      if (data_properties.sort === DBX_DSORT_ERROR) {
+         request.result_data = { "sqlcode": -1, "sqlstate": "HY000", "error": data, "columns": [] };
+      }
+      else {
+         let sql_no_cols = parseInt(data)
+         request.result_data = { "sqlcode": 0, "sqlstate": "00000", "columns": [] };
+         for (let n = 0; n < sql_no_cols; n++) {
+            block_get_size(pbuffer, offset, data_properties);
+            offset += 5;
+            data = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString();
+            col_data = data.split("|");
+            request.result_data.columns.push({ "name": col_data[0], "type": col_data[1] });
+            offset += data_properties.len;
+         }
+      }
+   }
+   else if (request.command === DBX_CMND_SQLROW && data_properties.len > 0) {
+      let col_data = [];
+      let offset = 5;
+      block_get_size(pbuffer, offset, data_properties);
+      let len = data_properties.len;
+      offset += 4;
+      block_get_size(pbuffer, offset, data_properties);
+      //console.log("mg_dbx_napi.js SQL data properties => ", data_properties);
+      offset += 5;
+      let data = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString();
+      offset += data_properties.len;
+      if (data_properties.sort === DBX_DSORT_ERROR) {
+         request.result_data = { "sqlcode": 0, "sqlstate": "", "error": data, "columns": [] };
+         request.error_message = data;
+      }
+      else {
+         request.result_data = { "sqlcode": 0, "sqlstate": "00000", "sql_row_no": data, "values": [] };
+         for (let n = 0; offset < (len + 5); n++) {
+            block_get_size(pbuffer, offset, data_properties);
+            offset += 5;
+            data = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString();
+            request.result_data.values.push(data);
+            offset += data_properties.len;
          }
       }
    }
