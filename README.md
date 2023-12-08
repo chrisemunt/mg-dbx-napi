@@ -987,6 +987,6 @@ Unless required by applicable law or agreed to in writing, software distributed 
 * Introduce support for direct SQL access.
 * Correct a fault in the cursor operation to return a global directory listing from YottaDB.
 
-### v1.4.6 (18 November 2023)
+### v1.4.6 (8 December 2023)
 
 * Introduce native Unicode support for InterSystems DB Servers - as character set/encoding UTF-16.
