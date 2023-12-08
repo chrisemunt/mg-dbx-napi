@@ -3,7 +3,7 @@
 High speed Synchronous and Asynchronous access to InterSystems Cache/IRIS and YottaDB from Node.js or Bun.
 
 Chris Munt <cmunt@mgateway.com>  
-18 November 2023, MGateway Ltd [http://www.mgateway.com](http://www.mgateway.com)
+8 December 2023, MGateway Ltd [http://www.mgateway.com](http://www.mgateway.com)
 
 * Verified to work with Node.js and the Bun JavaScript engine.
 * Two connectivity models to the InterSystems or YottaDB database are provided: High performance via the local database API or network based.
@@ -334,6 +334,46 @@ Example 2 (Change the current Namespace):
 * If the operation is successful this method will echo back the new Namespace name.  If not successful, the method will return the name of the current (unchanged) Namespace.
 
 
+### Returning (and optionally changing) the current character set
+
+UTF-8 is the default character encoding for **mg-dbx-napi**.  The other option is the 8-bit ASCII character set (characters of the range ASCII 0 to ASCII 255).  Native Unicode (as UTF-16) is supported for InterSystems DB Servers. The ASCII character set is a better option when exchanging single-byte binary data with the database.
+
+       current_charset = db.charset([<new_charset>]);
+
+Example 1 (Get the current character set): 
+
+       var charset = db.charset();
+
+Example 2 (Change the current character set): 
+
+       var new_charset = db.charset('ascii');
+
+Example 3 (Native Unicode support for InterSystems DB Servers): 
+
+       var new_charset = db.charset('utf-16');
+
+* If the operation is successful this method will echo back the new character set name.  If not successful, the method will return the name of the current (unchanged) character set.
+* Currently supported character sets and encoding schemes: 'ascii', 'utf-8' and 'utf-16' for InterSystems DB Servers.
+
+
+### Setting (or resetting) the timeout for the connection
+
+       new_timeout = db.settimeout(<new_timeout>);
+
+Specify a new timeout value (in seconds) for the connection.  If the operation is successful this method will return the new value for the timeout.
+
+Example (Set the timeout to 30 seconds): 
+
+       var new_timeout = db.settimeout(30);
+
+
+### Get the error message associated with the previous database operation
+
+       error_message = db.geterrormessage();
+
+This method will return the error message (as a string) associated with the previous database operation.  An empty string will be returned if the previous operation completed successfully.
+
+
 ### Close database connection
 
        db.close();
@@ -575,7 +615,7 @@ This facility provides high-performance techniques for traversing records held i
 
 The first task is to specify the 'query' for the global traverse.
 
-       query = new mcursor(db, {global: <global_name>, key: [<seed_key>]}[, <options>]);
+       query = new mcursor(db, {global: <global_name>, key: [<seed_key>]}[, {<options>}]);
 
 The 'options' object can contain the following properties:
 
@@ -610,7 +650,7 @@ Example 1 (return all key values from the 'Person' global - returns a simple var
 
 Example 2 (return all key values and names from the 'Person' global - returns an object):
 
-       query = new mcursor(db, {global: "Person", key: [""]}, multilevel: false, getdata: true);
+       query = new mcursor(db, {global: "Person", key: [""]}, {multilevel: false, getdata: true});
        while ((result = query.next()) !== null) {
           console.log("result: " + JSON.stringify(result, null, '\t'));
        }
@@ -618,14 +658,14 @@ Example 2 (return all key values and names from the 'Person' global - returns an
 
 Example 3 (return all key values and names from the 'Person' global - returns a string):
 
-       query = new mcursor(db, {global: "Person", key: [""]}, multilevel: false, getdata: true, format: "url"});
+       query = new mcursor(db, {global: "Person", key: [""]}, {multilevel: false, getdata: true, format: "url"});
        while ((result = query.next()) !== null) {
           console.log("result: " + result);
        }
 
 Example 4 (return all key values and names from the 'Person' global, including any descendant nodes):
 
-       query = new mcursor(db, {global: "Person", key: [""]}, {{multilevel: true, getdata: true});
+       query = new mcursor(db, {global: "Person", key: [""]}, {multilevel: true, getdata: true});
        while ((result = query.next()) !== null) {
           console.log("result: " + JSON.stringify(result, null, '\t'));
        }
@@ -795,10 +835,10 @@ Example 2 Reset a container to hold an existing instance (object %Id of 2):
 
 The first task is to specify the SQL query.
 
-       query = new mcursor(db, {sql: <sql_statement>[, type: <sql_engine>]);
+       query = new mcursor(db, {sql: <sql_statement>[, type: <sql_engine>]});
 Or:
 
-       query = db.sql({sql: <sql_statement>[, type: <sql_engine>]);
+       query = db.sql({sql: <sql_statement>[, type: <sql_engine>]});
 
 Example 1 (using MGSQL):
 
@@ -946,3 +986,7 @@ Unless required by applicable law or agreed to in writing, software distributed 
 
 * Introduce support for direct SQL access.
 * Correct a fault in the cursor operation to return a global directory listing from YottaDB.
+
+### v1.4.6 (18 November 2023)
+
+* Introduce native Unicode support for InterSystems DB Servers - as character set/encoding UTF-16.
