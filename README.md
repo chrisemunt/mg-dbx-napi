@@ -3,7 +3,7 @@
 High speed Synchronous and Asynchronous access to InterSystems Cache/IRIS and YottaDB from Node.js or Bun.
 
 Chris Munt <cmunt@mgateway.com>  
-8 December 2023, MGateway Ltd [http://www.mgateway.com](http://www.mgateway.com)
+4 February 2024, MGateway Ltd [http://www.mgateway.com](http://www.mgateway.com)
 
 * Verified to work with Node.js and the Bun JavaScript engine.
 * Two connectivity models to the InterSystems or YottaDB database are provided: High performance via the local database API or network based.
@@ -945,7 +945,7 @@ However, the packaging included within this repository means that it will automa
 
 ## <a name="license">License</a>
 
-Copyright (c) 2021-2023 MGateway Ltd,
+Copyright (c) 2021-2024 MGateway Ltd,
 Surrey UK.                                                      
 All rights reserved.
  
@@ -990,3 +990,7 @@ Unless required by applicable law or agreed to in writing, software distributed 
 ### v1.4.6 (8 December 2023)
 
 * Introduce native Unicode support for InterSystems DB Servers - as character set/encoding UTF-16.
+
+### v1.4.7 (4 February 2024)
+
+* Correct a regression in the processing of numeric values (regression introduced in v1.4.6).
