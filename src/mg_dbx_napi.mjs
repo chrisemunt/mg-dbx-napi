@@ -5,7 +5,7 @@
 //   | Description: An Interface to InterSystems Cache/IRIS and YottaDB         |
 //   | Author:      Chris Munt cmunt@mgateway.com                               |
 //   |                         chris.e.munt@gmail.com                           |
-//   | Copyright(c) 2019 - 2023 MGateway Ltd                                    |
+//   | Copyright(c) 2019 - 2024 MGateway Ltd                                    |
 //   | Surrey UK.                                                               |
 //   | All rights reserved.                                                     |
 //   |                                                                          |
@@ -44,7 +44,7 @@ else {
 
 const DBX_VERSION_MAJOR       = 1;
 const DBX_VERSION_MINOR       = 4;
-const DBX_VERSION_BUILD       = 6;
+const DBX_VERSION_BUILD       = 7;
 
 const DBX_DSORT_INVALID       = 0;
 const DBX_DSORT_DATA          = 1;
@@ -140,7 +140,7 @@ class server {
    buffer_size = [0, 0, 0, 0, 0, 0, 0, 0];
 
    constructor(...args) {
-      this.buffer[0] = new Uint8Array(DBX_INPUT_BUFFER_SIZE);
+     this.buffer[0] = new Uint8Array(DBX_INPUT_BUFFER_SIZE);
       this.buffer_size[0] = DBX_INPUT_BUFFER_SIZE;
       return;
    }
@@ -891,8 +891,12 @@ class server {
       }
 
       for (let argn = 0; argn < request.argc; argn++) {
-         // console.log(argn, " = ", args[argn], " : ", typeof args[argn]);
-         str = args[argn];
+        //console.log(argn, " = ", args[argn], " : ", typeof args[argn]);
+        // v1.4.7
+        if (typeof args[argn] === 'number')  
+          str = args[argn].toString();
+        else
+          str = args[argn];
          if (argn == 0)
             offset = block_add_string(buffer, offset, str, str.length, DBX_DSORT_GLOBAL, DBX_DTYPE_STR, this.utf16);
          else
@@ -1094,7 +1098,7 @@ class mglobal {
       if (request.async) {
          async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
          return null;
-      }
+     }
       const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
       this.db.get_result(this.db.buffer[bidx], pdata, request);
       this.db.release_buffer(bidx);
