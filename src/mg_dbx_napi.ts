@@ -5,7 +5,7 @@
 //   | Description: An Interface to InterSystems Cache/IRIS and YottaDB         |
 //   | Author:      Chris Munt cmunt@mgateway.com                               |
 //   |                         chris.e.munt@gmail.com                           |
-//   | Copyright(c) 2019 - 2023 MGateway Ltd                                    |
+//   | Copyright(c) 2019 - 2024 MGateway Ltd                                    |
 //   | Surrey UK.                                                               |
 //   | All rights reserved.                                                     |
 //   |                                                                          |
@@ -41,7 +41,7 @@ else {
 
 const DBX_VERSION_MAJOR: number      = 1;
 const DBX_VERSION_MINOR: number      = 4;
-const DBX_VERSION_BUILD: number      = 6;
+const DBX_VERSION_BUILD: number      = 7;
 
 const DBX_DSORT_INVALID: number      = 0;
 const DBX_DSORT_DATA: number         = 1;
@@ -892,7 +892,11 @@ class server {
 
       for (let argn = 0; argn < request.argc; argn++) {
          //console.log(argn, " = ", args[argn], " : ", typeof args[argn]);
-         str = args[argn];
+        // v1.4.7
+        if (typeof args[argn] === 'number')
+          str = args[argn].toString();
+        else
+          str = args[argn];
          if (argn == 0)
             offset = block_add_string(buffer, offset, str, str.length, DBX_DSORT_GLOBAL, DBX_DTYPE_STR, this.utf16);
          else
@@ -1932,6 +1936,14 @@ function block_add_string(buffer: Uint8Array, offset: number, data: string, data
       for (let i = 0; i < data_len; i++) {
          buffer[offset++] = data[i];
       }
+   }
+   return offset;
+}
+
+function block_add_buffer(buffer: Uint8Array, offset: number, data: string, data_len: number, data_sort: number, data_type: number): number {
+   offset = block_add_size(buffer, offset, data_len, data_sort, data_type);
+   for (let i = 0; i < data_len; i++) {
+      buffer[offset++] = data[i];
    }
    return offset;
 }
