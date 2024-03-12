@@ -954,7 +954,7 @@ Example (IRIS):
                use: "tcp",
                path:"/opt/IRIS20181/mgr",
                host: "localhost",
-               tcp_port: 7041
+               tcp_port: 7777,
                username: "_SYSTEM",
                password: "SYS",
                namespace: "USER"
