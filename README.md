@@ -3,7 +3,7 @@
 High speed Synchronous and Asynchronous access to InterSystems Cache/IRIS and YottaDB from Node.js or Bun.
 
 Chris Munt <cmunt@mgateway.com>  
-4 February 2024, MGateway Ltd [http://www.mgateway.com](http://www.mgateway.com)
+12 March 2024, MGateway Ltd [http://www.mgateway.com](http://www.mgateway.com)
 
 * Verified to work with Node.js and the Bun JavaScript engine.
 * Two connectivity models to the InterSystems or YottaDB database are provided: High performance via the local database API or network based.
@@ -21,6 +21,7 @@ Contents
 * [Transaction Processing](#tprocessing)
 * [Direct access to InterSystems classes (IRIS and Cache)](#dbclasses)
 * [Direct access to SQL: MGSQL and InterSystems SQL (IRIS and Cache)](#dbsql)
+* [JavaScript Superserver](#jssuperserver)
 * [Background and History of This Package](#overview)
 * [License](#license)
 
@@ -104,7 +105,7 @@ The in-process API connection does **not** require installation of our DB Supers
 
 The M support routines are required for:
 
-* Network based access to databases.
+* Network based access to databases (unless the experimental JavaScript based superserver is used).
 * Direct access to SQL (either via the API or via the network).
 * The Merge command under YottaDB (either via the API or via the network).
 
@@ -921,6 +922,60 @@ For 'select' queries that generate a result-set it is good practice to invoke th
        <query>.reset({sql: <sql_statement>[, type: <sql_engine>]);
 
 
+## <a name="jssuperserver">JavaScript Superserver</a>
+
+* Note: This facility is experimental at this time.  Also, due to missing functionality in the Bun JavaScript engine, the JavaScript Superserver only works under Node.js. 
+
+**mg-dbx-napi** can connect to remote DB Servers over the network.  Usually, this requires the use of a Superserver written in M-code installed within the DB Server.  We now include a Superserver written purely in JavaScript (**mgsi_node.mjs**).  The JavaScript Superserver resides on the same host as the DB Server.
+
+**mg-dbx-napi**, running on the remote client, connects to this Superserver which then connects to the DB Server via its API.  Using this facility removes the need for the M-based Superserver operating within the DB Server environment.
+
+Required components:
+
+* On the client: mg_dbx_napi.mjs|ts and mg-dbx-napi.node
+* On the DB Server: mgsi_node.mjs and mg-dbx-napi.node
+
+Starting the JavaScript Superserver:
+
+       node mgsi_node.mjs <tcp_port>
+
+Example (Superserver listening on TCP port 7777):
+
+       node mgsi_node.mjs 7777
+
+On the client-side, the **mg-dbx-napi** open() method must be supplied with parameters for both API-based and network-based access.  **mg-dbx-napi** will use the network-oriented parameters to first connect to the remote JavaScript Superserver which will then use the forwarded API-oriented parameters to connect to the DB Server.
+
+Ordinarily, when both API-oriented and network-oriented parameters are supplied to the open() method, the API-oriented parameters take precedence.  However, in this case we want the network-oriented parameters to take precedence in the first instance.  To ensure that this happens, set the **use** parameter to **'tcp'**.
+
+Example (IRIS):
+
+          var open = db.open({
+               type: "YottaDB",
+               use: "tcp",
+               path:"/opt/IRIS20181/mgr",
+               host: "localhost",
+               tcp_port: 7041
+               username: "_SYSTEM",
+               password: "SYS",
+               namespace: "USER"
+             });
+
+Example (YottaDB):
+
+           var open = db.open({
+               type: "YottaDB",
+               use: "tcp",
+               path: "/usr/local/lib/yottadb/r138",
+               host: "localhost",
+               tcp_port: 7777,
+               env_vars: {
+                 ydb_gbldir: '/root/.yottadb/r1.38_x86_64/g/yottadb.gld',
+                 ydb_routines: '/root/.yottadb/r1.38_x86_64/o*(/root/.yottadb/r1.38_x86_64/r /root/.yottadb/r) /usr/local/lib/yottadb/r138/libyottadbutil.so',
+                 ydb_ci: '/usr/local/lib/yottadb/r138/zmgsi.ci'
+               }
+             });
+
+
 ## <a name="background">Background and History of This Package</a>
 
 **Node.js** was released in 2009 and is based on the Google V8 JavaScript engine.  It has always been possible to extend the functionality of Node.js by creating add-on modules that work directly to the V8 C++ API.  With Node.js version 8, the third iteration of a new C++ API was released - Node-API.  This API is intrinsically part of Node.js and, as such, is independent of the underlying JavaScript implementation.  A key design goal of this new API was that it should be Application Binary Interface (ABI) stable across versions of Node.js.  In other words, it should not be necessary to recompile add-on modules based on Node-API when the underlying Node.js platform is upgraded to a new version.  By contrast, Node.js add-ons based on the native V8 API need to be recompiled every time the underlying Node.js/V8 engine is upgraded.
@@ -994,3 +1049,7 @@ Unless required by applicable law or agreed to in writing, software distributed 
 ### v1.4.7 (4 February 2024)
 
 * Correct a regression in the processing of numeric values (regression introduced in v1.4.6).
+
+### v1.4.8 (12 March 2024)
+
+* Introduce a JavaScript based Superserver.  This facility is currently only available for Node.js.
