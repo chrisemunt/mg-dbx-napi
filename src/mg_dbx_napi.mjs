@@ -29,22 +29,22 @@
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 
-let dbx;
+//let dbx;
 let arch = process.arch;
 if (arch === 'x64' && process.platform === 'win32') arch = 'win';
 if (['win', 'arm64', 'x64'].includes(arch)) {
-   dbx = require('mg-dbx-napi/' + arch);
+   //dbx = require('mg-dbx-napi/' + arch);
 }
 else {
    // throw an error - platform not supported
 }
 
-//const dbx = require('mg-dbx-napi.node');
+const dbx = require('mg-dbx-napi.node');
 //const { Buffer } = require('node:buffer');
 
 const DBX_VERSION_MAJOR       = 1;
 const DBX_VERSION_MINOR       = 4;
-const DBX_VERSION_BUILD       = 7;
+const DBX_VERSION_BUILD       = 8;
 
 const DBX_DSORT_INVALID       = 0;
 const DBX_DSORT_DATA          = 1;
@@ -131,6 +131,7 @@ class server {
    server_software = "";
    error_message = "";
    chset = "utf-8";
+   use = "";
    timeout = 60;
    init = 0;
    index = 0;
@@ -295,6 +296,12 @@ class server {
                   this.chset = chset;
                }
             }
+            if (args[0].hasOwnProperty('use')) {
+               let use = args[0].use.toLowerCase();
+               if (use === 'api' || use === 'tcp' || use === 'net') {
+                  this.use = use;
+               }
+            }
          }
       }
 
@@ -317,6 +324,7 @@ class server {
       offset = block_add_string(this.buffer[bidx], offset, this.server_software, this.server_software.length, DBX_DSORT_DATA, DBX_DTYPE_STR, 0);
       offset = block_add_string(this.buffer[bidx], offset, this.timeout.toString(), this.timeout.toString().length, DBX_DSORT_DATA, DBX_DTYPE_INT, 0);
       offset = block_add_string(this.buffer[bidx], offset, this.chset, this.chset.length, DBX_DSORT_DATA, DBX_DTYPE_STR, 0);
+      offset = block_add_string(this.buffer[bidx], offset, this.use, this.use.length, DBX_DSORT_DATA, DBX_DTYPE_STR, 0);
       offset = block_add_string(this.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR, 0);
       add_head(this.buffer[bidx], 0, offset, request.command);
 

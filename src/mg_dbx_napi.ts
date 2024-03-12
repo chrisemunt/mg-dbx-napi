@@ -41,7 +41,7 @@ else {
 
 const DBX_VERSION_MAJOR: number      = 1;
 const DBX_VERSION_MINOR: number      = 4;
-const DBX_VERSION_BUILD: number      = 7;
+const DBX_VERSION_BUILD: number      = 8;
 
 const DBX_DSORT_INVALID: number      = 0;
 const DBX_DSORT_DATA: number         = 1;
@@ -131,7 +131,8 @@ class server {
    server: string = "";
    server_software: string = "";
    error_message: string = "";
-   chset:string  = "utf-8";
+   chset: string = "utf-8";
+   use: string = "";
    timeout: number = 60;
    init: number = 0;
    index: number = 0;
@@ -295,6 +296,12 @@ class server {
                   this.chset = chset;
                }
             }
+            if (args[0].hasOwnProperty('use')) {
+              let use = args[0].use.toLowerCase();
+              if (use === 'api' || use === 'tcp' || use === 'net') {
+                 this.use = use;
+              }
+            }
          }
       }
 
@@ -317,6 +324,7 @@ class server {
       offset = block_add_string(this.buffer[bidx], offset, this.server_software, this.server_software.length, DBX_DSORT_DATA, DBX_DTYPE_STR, 0);
       offset = block_add_string(this.buffer[bidx], offset, this.timeout.toString(), this.timeout.toString().length, DBX_DSORT_DATA, DBX_DTYPE_INT, 0);
       offset = block_add_string(this.buffer[bidx], offset, this.chset, this.chset.length, DBX_DSORT_DATA, DBX_DTYPE_STR, 0);
+      offset = block_add_string(this.buffer[bidx], offset, this.use, this.use.length, DBX_DSORT_DATA, DBX_DTYPE_STR, 0);
       offset = block_add_string(this.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR, 0);
       add_head(this.buffer[bidx], 0, offset, request.command);
 
