@@ -3,7 +3,7 @@
 High speed Synchronous and Asynchronous access to InterSystems Cache/IRIS and YottaDB from Node.js or Bun.
 
 Chris Munt <cmunt@mgateway.com>  
-12 March 2024, MGateway Ltd [http://www.mgateway.com](http://www.mgateway.com)
+19 March 2024, MGateway Ltd [http://www.mgateway.com](http://www.mgateway.com)
 
 * Verified to work with Node.js and the Bun JavaScript engine.
 * Two connectivity models to the InterSystems or YottaDB database are provided: High performance via the local database API or network based.
@@ -107,7 +107,6 @@ The M support routines are required for:
 
 * Network based access to databases (unless the experimental JavaScript based superserver is used).
 * Direct access to SQL (either via the API or via the network).
-* The Merge command under YottaDB (either via the API or via the network).
 
 If none of the above apply you do not need to install these routines - proceed to  [Connecting to the database](#connect). 
 
@@ -579,8 +578,6 @@ Example (unlock global node '1'):
 
 ### Merge (or copy) part of one global to another
 
-* Note: In order to use the 'Merge' facility with YottaDB the M support routines should be installed (**%zmgsi** and **%zmgsis**).
-
 Global objects must be used to invoke the Merge command.
 
 Merge from global2 to global1:
@@ -943,6 +940,10 @@ Example (Superserver listening on TCP port 7777):
 
        node mgsi_node.mjs 7777
 
+By default, the Superserver will only write initial start-up information to the console.  If you wish to see evidence of all requests being processed, start the Superserver in 'verbose' mode:
+
+       node mgsi_node.mjs 7777 verbose
+
 On the client-side, the **mg-dbx-napi** open() method must be supplied with parameters for both API-based and network-based access.  **mg-dbx-napi** will use the network-oriented parameters to first connect to the remote JavaScript Superserver which will then use the forwarded API-oriented parameters to connect to the DB Server.
 
 Ordinarily, when both API-oriented and network-oriented parameters are supplied to the open() method, the API-oriented parameters take precedence.  However, in this case we want the network-oriented parameters to take precedence in the first instance.  To ensure that this happens, set the **use** parameter to **'tcp'**.
@@ -1053,3 +1054,8 @@ Unless required by applicable law or agreed to in writing, software distributed 
 ### v1.4.8 (12 March 2024)
 
 * Introduce a JavaScript based Superserver.  This facility is currently only available for Node.js.
+
+### v1.4.9 (19 March 2024)
+
+* Remove the need for the M support routines (superserver code) to be installed in order to support the **Merge** command under YottaDB.  If API-based connectivity to a local YottaDB database is selected then the **Merge** command will be executed via a series of YottaDB API calls.
+* Add a 'verbose' option to the JavaScript based Superserver.
