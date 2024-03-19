@@ -37,23 +37,35 @@ const cpus = os.cpus().length;
 
 const dbx = require('mg-dbx-napi.node');
 
+
+const DBX_VERSION_MAJOR = 1;
+const DBX_VERSION_MINOR = 0;
+const DBX_VERSION_BUILD = 2;
 const DBX_BUFFER_SIZE = 3641145; // or 32768
 const DBX_CMND_OPEN = 1;
 
 let port = 7041;
 let primary = true;
+let verbose = "";
+let vlevel = 0;
 let node_path = process.argv[0];
 let mod_name = process.argv[1];
 
 if (process.argv.length > 2) {
   port = parseInt(process.argv[2]);
 }
+if (process.argv.length > 3) {
+  verbose = process.argv[3].toLowerCase();;
+}
+if (verbose === 'verbose') {
+  vlevel = 1;
+}
 if (port === 1000000) {
    primary = false;
 }
 
 if (primary) {
-  console.log('mgsi_node server for Node.js %s; CPUs=%d; pid=%d;', process.version, cpus, process.pid);
+  console.log('mgsi_node server version %d.%d.%d for Node.js %s; CPUs=%d; pid=%d;', DBX_VERSION_MAJOR, DBX_VERSION_MINOR, DBX_VERSION_BUILD, process.version, cpus, process.pid);
 
   let server = net.createServer();
   let workers = new Map();
@@ -77,11 +89,12 @@ if (primary) {
   });
 
   server.on('connection', (conn) => {    
-    let remote_address = conn.remoteAddress + ':' + conn.remotePort;  
-    console.log('mgsi_node new client connection from %s', remote_address);
-
+    let remote_address = conn.remoteAddress + ':' + conn.remotePort;
+    if (vlevel === 1) {
+      console.log('mgsi_node new client connection from %s', remote_address);
+    }
     conn.on('data', (d) => {
-      let worker = child_process.fork(mod_name, [1000000], { stdio: ['inherit', 'inherit', 'inherit', 'ipc'] });
+      let worker = child_process.fork(mod_name, [1000000, verbose], { stdio: ['inherit', 'inherit', 'inherit', 'ipc'] });
 
       workers.set(worker.pid, worker);
 
@@ -92,7 +105,9 @@ if (primary) {
         }
 
         if (message === 'stopping') {
-          console.log('master process removing stopped worker from Map');
+          if (vlevel === 1) {
+            console.log('master process removing stopped worker from Map');
+          }
           workers.delete(worker.pid);
         }
 
@@ -185,8 +200,10 @@ else {
       return;
     }
 
-    let remote_address = conn.remoteAddress + ':' + conn.remotePort;  
-    console.log('mgsi_node new worker process created pid=%d; client=%s', process.pid, remote_address);
+    let remote_address = conn.remoteAddress + ':' + conn.remotePort;
+    if (vlevel === 1) {
+      console.log('mgsi_node new worker process created pid=%d; client=%s', process.pid, remote_address);
+    }
 
     // turn the Nagle algorithm off
     conn.setNoDelay();
@@ -206,7 +223,9 @@ else {
       offset += 5;
       let idx = get_size(data, offset);
       offset += 5;
-      console.log('>>> Request: command=%d, data_length=%d;', cmnd, tlen);
+      if (vlevel === 1) {
+        console.log('>>> Request: command=%d, data_length=%d;', cmnd, tlen);
+      }
       let len = 0;
       let str = "";
       if (cmnd === DBX_CMND_OPEN) {
@@ -236,7 +255,9 @@ else {
     });
 
     conn.on('close', () => {
-      console.log('connection closed');
+      if (vlevel === 1) {
+        console.log('connection closed');
+      }
       process.send('stopping');
       evTarget.dispatchEvent(new Event('stop'));
       setTimeout(() => {

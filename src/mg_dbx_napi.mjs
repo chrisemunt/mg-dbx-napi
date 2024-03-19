@@ -40,11 +40,10 @@ else {
 }
 
 //const dbx = require('mg-dbx-napi.node');
-//const { Buffer } = require('node:buffer');
 
 const DBX_VERSION_MAJOR       = 1;
 const DBX_VERSION_MINOR       = 4;
-const DBX_VERSION_BUILD       = 8;
+const DBX_VERSION_BUILD       = 9;
 
 const DBX_DSORT_INVALID       = 0;
 const DBX_DSORT_DATA          = 1;
