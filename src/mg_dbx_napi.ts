@@ -40,7 +40,7 @@ else {
 
 const DBX_VERSION_MAJOR: number      = 1;
 const DBX_VERSION_MINOR: number      = 4;
-const DBX_VERSION_BUILD: number      = 9;
+const DBX_VERSION_BUILD: number      = 10;
 
 const DBX_DSORT_INVALID: number      = 0;
 const DBX_DSORT_DATA: number         = 1;
@@ -124,7 +124,7 @@ class server {
    tcp_port: number = 0;
    username: string = "";
    password: string = "";
-   namespace: string = "";
+   nspace: string = "";
    env_vars: string = "";
    debug: string = "";
    server: string = "";
@@ -268,7 +268,7 @@ class server {
                this.password = args[0].password;
             }
             if (args[0].hasOwnProperty('namespace')) {
-               this.namespace = args[0].namespace;
+               this.nspace = args[0].namespace;
             }
             if (args[0].hasOwnProperty('env_vars')) {
                if (typeof args[0].env_vars === 'object') {
@@ -314,7 +314,7 @@ class server {
       offset = block_add_string(this.buffer[bidx], offset, this.tcp_port.toString(), this.tcp_port.toString().length, DBX_DSORT_DATA, DBX_DTYPE_INT, 0);
       offset = block_add_string(this.buffer[bidx], offset, this.username, this.username.length, DBX_DSORT_DATA, DBX_DTYPE_STR, 0);
       offset = block_add_string(this.buffer[bidx], offset, this.password, this.password.length, DBX_DSORT_DATA, DBX_DTYPE_STR, 0);
-      offset = block_add_string(this.buffer[bidx], offset, this.namespace, this.namespace.length, DBX_DSORT_DATA, DBX_DTYPE_STR, 0);
+      offset = block_add_string(this.buffer[bidx], offset, this.nspace, this.nspace.length, DBX_DSORT_DATA, DBX_DTYPE_STR, 0);
       offset = block_add_string(this.buffer[bidx], offset, "", 0, DBX_DSORT_DATA, DBX_DTYPE_STR, 0);
       offset = block_add_string(this.buffer[bidx], offset, "", 0, DBX_DSORT_DATA, DBX_DTYPE_STR, 0);
       offset = block_add_string(this.buffer[bidx], offset, this.debug, this.debug.length, DBX_DSORT_DATA, DBX_DTYPE_STR, 0);
@@ -375,7 +375,7 @@ class server {
       return request.result_data;
    }
 
-   current_namespace(...args: any[]): string {
+   namespace(...args: any[]): string {
       let offset = 0;
       let request = { command: DBX_CMND_NSGET, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
 
@@ -392,17 +392,28 @@ class server {
       }
 
       let bidx = this.get_buffer();
-      offset = block_add_size(this.buffer[bidx], offset, offset, DBX_DSORT_DATA, DBX_DTYPE_INT);
-      offset = block_add_size(this.buffer[bidx], offset, this.buffer[bidx].length, DBX_DSORT_DATA, DBX_DTYPE_INT);
-      offset = block_add_size(this.buffer[bidx], offset, this.index, DBX_DSORT_DATA, DBX_DTYPE_INT);
 
       if (args.length > 0) {
-         request.command = DBX_CMND_NSSET;
-         offset = this.pack_arguments(this.buffer[bidx], offset, this.index, args, request.command, 0);
-         const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+        request.command = DBX_CMND_NSSET;
+        request.argc = 1;
+        offset = block_add_size(this.buffer[bidx], offset, offset, DBX_DSORT_DATA, DBX_DTYPE_INT);
+        offset = block_add_size(this.buffer[bidx], offset, this.buffer[bidx].length, DBX_DSORT_DATA, DBX_DTYPE_INT);
+        offset = block_add_size(this.buffer[bidx], offset, this.index, DBX_DSORT_DATA, DBX_DTYPE_INT);
+
+        offset = block_add_string(this.buffer[bidx], offset, args[0], args[0].length, DBX_DSORT_DATA, DBX_DTYPE_STR, this.utf16);
+        offset = block_add_string(this.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR, 0);
+        add_head(this.buffer[bidx], 0, offset, request.command);
+
+        const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+        this.get_result(this.buffer[bidx], pdata, request);
+        this.release_buffer(bidx);
+
+        return request.result_data;
+
       }
 
       request.command = DBX_CMND_NSGET;
+      request.argc = 0;
       offset = 0;
       offset = block_add_size(this.buffer[bidx], offset, offset, DBX_DSORT_DATA, DBX_DTYPE_INT);
       offset = block_add_size(this.buffer[bidx], offset, this.buffer[bidx].length, DBX_DSORT_DATA, DBX_DTYPE_INT);
