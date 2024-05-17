@@ -3,7 +3,7 @@
 High speed Synchronous and Asynchronous access to InterSystems Cache/IRIS and YottaDB from Node.js or Bun.
 
 Chris Munt <cmunt@mgateway.com>  
-19 March 2024, MGateway Ltd [http://www.mgateway.com](http://www.mgateway.com)
+17 May 2024, MGateway Ltd [http://www.mgateway.com](http://www.mgateway.com)
 
 * Verified to work with Node.js and the Bun JavaScript engine.
 * Two connectivity models to the InterSystems or YottaDB database are provided: High performance via the local database API or network based.
@@ -1059,3 +1059,7 @@ Unless required by applicable law or agreed to in writing, software distributed 
 
 * Remove the need for the M support routines (superserver code) to be installed in order to support the **Merge** command under YottaDB.  If API-based connectivity to a local YottaDB database is selected then the **Merge** command will be executed via a series of YottaDB API calls.
 * Add a 'verbose' option to the JavaScript based Superserver.
+
+### v1.4.10 (17 May 2024)
+
+* Correct a fault in the InterSystems get and change namespace operations (db.namespace()).
