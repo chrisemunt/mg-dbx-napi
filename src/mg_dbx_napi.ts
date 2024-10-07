@@ -39,8 +39,8 @@ else {
 //const dbx = require('./mg-dbx-napi.node');
 
 const DBX_VERSION_MAJOR: number      = 1;
-const DBX_VERSION_MINOR: number      = 4;
-const DBX_VERSION_BUILD: number      = 10;
+const DBX_VERSION_MINOR: number      = 5;
+const DBX_VERSION_BUILD: number      = 11;
 
 const DBX_DSORT_INVALID: number      = 0;
 const DBX_DSORT_DATA: number         = 1;
@@ -84,6 +84,8 @@ const DBX_CMND_GNNODE: number        = 21;
 const DBX_CMND_GNNODEDATA: number    = 211;
 const DBX_CMND_GPNODE: number        = 22;
 const DBX_CMND_GPNODEDATA: number    = 221;
+const DBX_CMND_GSETCHILDNODES:number = 23;
+const DBX_CMND_GGETCHILDNODES:number = 24;
 
 const DBX_CMND_FUNCTION: number      = 31;
 
@@ -168,7 +170,7 @@ class server {
 
    charset(chset: string): string {
       let offset = 0;
-      let request = { command: DBX_CMND_CHARSET, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_CHARSET, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       chset.toLowerCase();
       if (chset === 'utf-8' || chset === 'utf-16' || chset === 'ascii') {
@@ -201,7 +203,7 @@ class server {
 
    settimeout(ntimeout: number): number {
       let offset = 0;
-      let request = { command: DBX_CMND_TIMEOUT, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_TIMEOUT, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (ntimeout > 3) {
          this.timeout = ntimeout;
@@ -231,7 +233,7 @@ class server {
 
    open(...args: any[]): string {
       let offset = 0;
-      let request = { command: DBX_CMND_OPEN, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_OPEN, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.init === 0) {
          const ret = dbx.init();
@@ -341,7 +343,7 @@ class server {
 
    close(...args: any[]): string {
       let offset = 0;
-      let request = { command: DBX_CMND_CLOSE, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_CLOSE, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.init === 0) {
          return "";
@@ -377,7 +379,7 @@ class server {
 
    namespace(...args: any[]): string {
       let offset = 0;
-      let request = { command: DBX_CMND_NSGET, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_NSGET, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.init === 0) {
          return "";
@@ -436,7 +438,7 @@ class server {
 
    set(...args: any[]): string {
       let offset = 0;
-      let request = { command: DBX_CMND_GSET, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_GSET, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.init === 0) {
          return "";
@@ -457,7 +459,7 @@ class server {
 
    get(...args: any[]): string {
       let offset = 0;
-      let request = { command: DBX_CMND_GGET, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_GGET, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.init === 0) {
          return "";
@@ -478,7 +480,7 @@ class server {
 
    delete(...args: any[]): string {
       let offset = 0;
-      let request = { command: DBX_CMND_GDELETE, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_GDELETE, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.init === 0) {
          return "";
@@ -499,7 +501,7 @@ class server {
 
    defined(...args: any[]): string {
       let offset = 0;
-      let request = { command: DBX_CMND_GDEFINED, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_GDEFINED, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.init === 0) {
          return "";
@@ -520,7 +522,7 @@ class server {
 
    next(...args: any[]): string {
       let offset = 0;
-      let request = { command: DBX_CMND_GNEXT, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_GNEXT, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.init === 0) {
          return "";
@@ -541,7 +543,7 @@ class server {
 
    previous(...args: any[]): string {
       let offset = 0;
-      let request = { command: DBX_CMND_GPREVIOUS, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_GPREVIOUS, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.init === 0) {
          return "";
@@ -562,7 +564,7 @@ class server {
 
    increment(...args: any[]): string {
       let offset = 0;
-      let request = { command: DBX_CMND_GINCREMENT, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_GINCREMENT, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.init === 0) {
          return "";
@@ -583,7 +585,7 @@ class server {
 
    lock(...args: any[]): string {
       let offset = 0;
-      let request = { command: DBX_CMND_GLOCK, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_GLOCK, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.init === 0) {
          return "";
@@ -604,7 +606,7 @@ class server {
 
    unlock(...args: any[]): string {
       let offset = 0;
-      let request = { command: DBX_CMND_GUNLOCK, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_GUNLOCK, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.init === 0) {
          return "";
@@ -625,7 +627,7 @@ class server {
 
    tstart(...args: any[]): string {
       let offset = 0;
-      let request = { command: DBX_CMND_TSTART, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_TSTART, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.init === 0) {
          return "";
@@ -659,7 +661,7 @@ class server {
 
    tlevel(...args: any[]): string {
       let offset = 0;
-      let request = { command: DBX_CMND_TLEVEL, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_TLEVEL, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.init === 0) {
          return "";
@@ -693,7 +695,7 @@ class server {
 
    tcommit(...args: any[]): string {
       let offset = 0;
-      let request = { command: DBX_CMND_TCOMMIT, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_TCOMMIT, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.init === 0) {
          return "";
@@ -727,7 +729,7 @@ class server {
 
    trollback(...args: any[]): string {
       let offset = 0;
-      let request = { command: DBX_CMND_TROLLBACK, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_TROLLBACK, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.init === 0) {
          return "";
@@ -761,7 +763,7 @@ class server {
 
    function(...args: any[]): string {
       let offset = 0;
-      let request = { command: DBX_CMND_FUNCTION, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_FUNCTION, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.init === 0) {
          return "";
@@ -789,7 +791,7 @@ class server {
 
    classmethod(...args: any[]): any {
       let offset = 0;
-      let request = { command: DBX_CMND_CCMETH, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_CCMETH, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.init === 0) {
          return "";
@@ -860,7 +862,7 @@ class server {
 
    benchmarkex(...args: any[]): string {
       let offset = 0;
-      let request = { command: 0, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: 0, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
       let data = 0;
 
       if (this.init === 0) {
@@ -927,7 +929,7 @@ class server {
       return offset;
    }
 
-   get_result(pbuffer: Uint8Array, pdata: Uint8Array, request: { command: number, argc: number, async: number, result_data: any, error_message: string, type: number }): any {
+   get_result(pbuffer: Uint8Array, pdata: Uint8Array, request: { command: number, argc: number, async: number, result_data: any, error_message: string, type: number, mode: number }): any {
       let data_properties = { len: 0, type: 0, sort: 0 };
 
       block_get_size(pbuffer, 0, data_properties);
@@ -962,6 +964,35 @@ class server {
             offset += 5;
             let key = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString();
             request.result_data = { "key": key, "data": data };
+         }
+         else if (request.command === DBX_CMND_GGETCHILDNODES) { // v1.5.11
+           request.result_data = [];
+           let key = "";
+           let data = "";
+           let mod = 0;
+           let offset = 5;
+           for (let n = 0; ; n++) {
+             mod = n % 2;
+             block_get_size(pbuffer, offset, data_properties);
+             offset += 5;
+             if (data_properties.sort === DBX_DSORT_EOD) {
+               break;
+             }
+             if (mod === 0) {
+               key = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString();
+             }
+             else {
+               data = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString();
+               //console.log("n=" + n + "; mod=" + mod + " ; key=" + key + "; data=" + data);
+               if (request.mode == 1) {
+                 request.result_data.push({ "key": key, "data": data });
+               }
+               else {
+                 request.result_data.push(key);
+               }
+             }
+             offset += data_properties.len;
+           }
          }
          else if (request.command === DBX_CMND_GNNODE || request.command === DBX_CMND_GNNODEDATA || request.command === DBX_CMND_GPNODE || request.command === DBX_CMND_GPNODEDATA) {
             let key = "";
@@ -1051,7 +1082,7 @@ class server {
 
    setloglevel(...args: any): string {
       let offset = 0;
-      let request = { command: DBX_CMND_LOGLEVEL, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_LOGLEVEL, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       let bidx = this.get_buffer();
       offset = this.pack_arguments(this.buffer[bidx], offset, this.index, args, request, 0);
@@ -1064,7 +1095,7 @@ class server {
 
    logmessage(message: string, title:string): string {
       let offset = 0;
-      let request = { command: DBX_CMND_LOGMESSAGE, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_LOGMESSAGE, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       let bidx = this.get_buffer();
       offset = block_add_size(this.buffer[bidx], offset, offset, DBX_DSORT_DATA, DBX_DTYPE_INT);
@@ -1090,7 +1121,7 @@ class mglobal {
    base_offset: number = 0;
 
    constructor(db: server, ...args: any[]) {
-      let request = { command: 0, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: 0, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
       this.db = db;
       this.base_buffer = new Uint8Array(DBX_INPUT_BUFFER_SIZE);
       this.base_offset = 0;
@@ -1104,7 +1135,7 @@ class mglobal {
 
    set(...args: any[]): string {
       let offset = 0;
-      let request = { command: DBX_CMND_GSET, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_GSET, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.db.init === 0) {
          return "";
@@ -1126,7 +1157,7 @@ class mglobal {
 
    get(...args: any[]): string {
       let offset = 0;
-      let request = { command: DBX_CMND_GGET, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_GGET, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.db.init === 0) {
          return "";
@@ -1148,7 +1179,7 @@ class mglobal {
 
    delete(...args: any[]): string {
       let offset = 0;
-      let request = { command: DBX_CMND_GDELETE, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_GDELETE, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.db.init === 0) {
          return "";
@@ -1170,7 +1201,7 @@ class mglobal {
 
    defined(...args: any[]): string {
       let offset = 0;
-      let request = { command: DBX_CMND_GDEFINED, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_GDEFINED, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.db.init === 0) {
          return "";
@@ -1192,7 +1223,7 @@ class mglobal {
 
    next(...args: any[]): string {
       let offset = 0;
-      let request = { command: DBX_CMND_GNEXT, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_GNEXT, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.db.init === 0) {
          return "";
@@ -1214,7 +1245,7 @@ class mglobal {
 
    previous(...args: any[]): string {
       let offset = 0;
-      let request = { command: DBX_CMND_GPREVIOUS, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_GPREVIOUS, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.db.init === 0) {
          return "";
@@ -1236,7 +1267,7 @@ class mglobal {
 
    increment(...args: any[]): string {
       let offset = 0;
-      let request = { command: DBX_CMND_GINCREMENT, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_GINCREMENT, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.db.init === 0) {
          return "";
@@ -1258,7 +1289,7 @@ class mglobal {
 
    lock(...args: any[]): string {
       let offset = 0;
-      let request = { command: DBX_CMND_GLOCK, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_GLOCK, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.db.init === 0) {
          return "";
@@ -1280,7 +1311,7 @@ class mglobal {
 
    unlock(...args: any[]): string {
       let offset = 0;
-      let request = { command: DBX_CMND_GUNLOCK, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_GUNLOCK, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.db.init === 0) {
          return "";
@@ -1304,7 +1335,7 @@ class mglobal {
       let offset = 0;
       let sort = 0;
       let str = "";
-      let request = { command: DBX_CMND_GMERGE, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_GMERGE, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.db.init === 0) {
          return "";
@@ -1340,8 +1371,140 @@ class mglobal {
       return request.result_data;
    }
 
+  // v1.5.11
+  setchildnodes(...args: any[]): string {
+    let offset = 0;
+    let request = { command: DBX_CMND_GSETCHILDNODES, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
+
+    if (this.db.init === 0) {
+      return "";
+    }
+
+    let argn = args.length;
+    if (argn < 2) {
+      return "";
+    }
+    if (typeof args[argn - 1] != "object" || typeof args[argn - 2] != "object") {
+      return "";
+    }
+    if (Array.isArray(args[argn - 2]) === false) {
+      return "";
+    }
+    let arrayn = argn - 2;
+    let key = "";
+    let value = "";
+
+    let bidx = this.db.get_buffer();
+    offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
+    if (argn > 2) {
+      for (let n = 0; n < (argn - 2); n++) {
+        if (typeof args[n] === 'number')
+          key = args[n].toString();
+        else
+          key = args[n];
+        offset = block_add_string(this.db.buffer[bidx], offset, key, key.length, DBX_DSORT_SUBSCRIPT, DBX_DTYPE_STR, this.db.utf16);
+      }
+    }
+    offset = block_add_string(this.db.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR, 0)
+    let options = "";
+    offset = block_add_string(this.db.buffer[bidx], offset, options, options.length, DBX_DSORT_DATA, DBX_DTYPE_STR, this.db.utf16);
+    let nnodes = args[arrayn].length;
+
+    for (let n = 0; n < nnodes; n++) {
+      if (typeof args[arrayn][n].key === 'number')
+        key = args[arrayn][n].key.toString();
+      else
+        key = args[arrayn][n].key;
+      if (typeof args[arrayn][n].value === 'number')
+        value = args[arrayn][n].value.toString();
+      else
+        value = args[arrayn][n].value;
+
+      offset = block_add_string(this.db.buffer[bidx], offset, key, key.length, DBX_DSORT_SUBSCRIPT, DBX_DTYPE_STR, this.db.utf16);
+      offset = block_add_string(this.db.buffer[bidx], offset, value, value.length, DBX_DSORT_DATA, DBX_DTYPE_STR, this.db.utf16);
+    }
+    offset = block_add_string(this.db.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR, 0)
+    add_head(this.db.buffer[bidx], 0, offset, request.command);
+
+    if (request.async) {
+      async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+      return null;
+    }
+    const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+    this.db.get_result(this.db.buffer[bidx], pdata, request);
+    this.db.release_buffer(bidx);
+
+    return request.result_data;
+  }
+
+  // v1.5.11
+  getchildnodes(...args: any[]): string {
+    let offset = 0;
+    let request = { command: DBX_CMND_GGETCHILDNODES, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
+
+    if (this.db.init === 0) {
+      return "";
+    }
+
+    let argn = args.length;
+    if (argn < 1) {
+      return "";
+    }
+    if (typeof args[argn - 1] != "object") {
+      return "";
+    }
+
+    let options = "";
+    if (args[argn - 1].hasOwnProperty('getdata') && args[argn - 1].getdata === true) {
+      options = options + "getdata:1\r\n";
+      request.mode = 1;
+    }
+    if (args[argn - 1].hasOwnProperty('max')) {
+      options = options + "max:" + args[argn - 1].max + "\r\n";
+    }
+    if (args[argn - 1].hasOwnProperty('start')) {
+      options = options + "start:" + args[argn - 1].start + "\r\n";
+    }
+    if (args[argn - 1].hasOwnProperty('end')) {
+      options = options + "end:" + args[argn - 1].end + "\r\n";
+    }
+    if (options.length > 0) {
+      options = options + "\r\n";
+    }
+
+    let key = "";
+    let value = "";
+
+    let bidx = this.db.get_buffer();
+    offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
+    if (argn > 1) {
+      for (let n = 0; n < (argn - 1); n++) {
+        if (typeof args[n] === 'number')
+          key = args[n].toString();
+        else
+          key = args[n];
+        offset = block_add_string(this.db.buffer[bidx], offset, key, key.length, DBX_DSORT_SUBSCRIPT, DBX_DTYPE_STR, this.db.utf16);
+      }
+    }
+    offset = block_add_string(this.db.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR, 0)
+    offset = block_add_string(this.db.buffer[bidx], offset, options, options.length, DBX_DSORT_DATA, DBX_DTYPE_STR, this.db.utf16);
+    offset = block_add_string(this.db.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR, 0)
+    add_head(this.db.buffer[bidx], 0, offset, request.command);
+
+    if (request.async) {
+      async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+      return null;
+    }
+    const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+
+    this.db.get_result(this.db.buffer[bidx], pdata, request);
+    this.db.release_buffer(bidx);
+
+    return request.result_data;
+  }
+
    reset(...args: any[]) {
-      let request = { command: 0, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: 0, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
       this.base_offset = 0;
       this.base_offset = this.db.pack_arguments(this.base_buffer, this.base_offset, this.db.index, args, request, 0);
       this.base_offset -= 5;
@@ -1374,7 +1537,7 @@ class mclass {
          this.base_offset = block_add_string(this.base_buffer, this.base_offset, this.class_name, this.class_name.length, DBX_DSORT_DATA, DBX_DTYPE_STR, this.utf16);
          if (args.length > 1 && this.db.init > 0) {
             let offset = 0;
-            let request = { command: DBX_CMND_CCMETH, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+            let request = { command: DBX_CMND_CCMETH, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
             let bidx = this.db.get_buffer();
 
             offset = this.db.pack_arguments(this.db.buffer[bidx], offset, db.index, args, request, 0);
@@ -1392,7 +1555,7 @@ class mclass {
 
    classmethod(...args: any[]): string {
       let offset = 0;
-      let request = { command: DBX_CMND_CCMETH, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_CCMETH, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.db.init === 0) {
          return "";
@@ -1417,7 +1580,7 @@ class mclass {
 
    method(...args: any[]): string {
       let offset = 0;
-      let request = { command: DBX_CMND_CMETH, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_CMETH, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.db.init === 0) {
          return "";
@@ -1440,7 +1603,7 @@ class mclass {
 
    getproperty(...args: any[]): string {
       let offset = 0;
-      let request = { command: DBX_CMND_CGETP, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_CGETP, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.db.init === 0) {
          return "";
@@ -1463,7 +1626,7 @@ class mclass {
 
    setproperty(...args: any[]): string {
       let offset = 0;
-      let request = { command: DBX_CMND_CSETP, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_CSETP, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.db.init === 0) {
          return "";
@@ -1486,7 +1649,7 @@ class mclass {
 
    closeinstance(...args: any[]): string {
       let offset = 0;
-      let request = { command: DBX_CMND_CCLOSE, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_CCLOSE, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.db.init === 0) {
          return "";
@@ -1519,7 +1682,7 @@ class mclass {
          this.base_offset = block_add_string(this.base_buffer, this.base_offset, this.class_name, this.class_name.length, DBX_DSORT_DATA, DBX_DTYPE_STR, this.utf16);
          if (args.length > 1 && this.db.init > 0) {
             let offset = 0;
-            let request = { command: DBX_CMND_CCMETH, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+            let request = { command: DBX_CMND_CCMETH, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
             let bidx = this.db.get_buffer();
 
             offset = this.db.pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, request, 0);
@@ -1568,7 +1731,7 @@ class mcursor {
    }
 
    reset(args: any[]) {
-      let request = { command: 0, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: 0, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       this.base_offset = 0;
       this.base_offset_last = 0;
@@ -1647,7 +1810,7 @@ class mcursor {
    execute(...args:any): any {
       let offset = 0;
       let context = 1; // binary response
-      let request = { command: DBX_CMND_SQLEXEC, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_SQLEXEC, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.db.init === 0) {
          return "";
@@ -1713,7 +1876,7 @@ class mcursor {
    cleanup(): any {
       let offset = 0;
       let context = 1; // binary response
-      let request = { command: DBX_CMND_SQLCLEANUP, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: DBX_CMND_SQLCLEANUP, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.db.init === 0) {
          return "";
@@ -1753,7 +1916,7 @@ class mcursor {
 
    next_ex(direction: number) {
       let offset = 0;
-      let request = { command: 0, argc: 0, async: 0, result_data: "", error_message: "", type: 0 };
+      let request = { command: 0, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
       let result = null;
 
       if (this.db.init === 0) {
