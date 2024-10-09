@@ -3,7 +3,7 @@
 High speed Synchronous and Asynchronous access to InterSystems Cache/IRIS and YottaDB from Node.js or Bun.
 
 Chris Munt <cmunt@mgateway.com>  
-7 October 2024, MGateway Ltd [http://www.mgateway.com](http://www.mgateway.com)
+9 October 2024, MGateway Ltd [http://www.mgateway.com](http://www.mgateway.com)
 
 * Verified to work with Node.js and the Bun JavaScript engine.
 * Two connectivity models to the InterSystems or YottaDB database are provided: High performance via the local database API or network based.
@@ -614,16 +614,19 @@ Where:
         {key: <keys value>, data: <data value>}
 
 
-* **options**: reserved for future use.
+* **options**: A JSON object in which the following options can be defined:
+	* **lock**: if **true**, acquire a lock on the target DB data node before proceeding.
+	* **locktimeout**: timeout for the lock operation (in seconds).
+
 
 Example 1:
 
        global = new mglobal(db, 'MyGlobal');
        const nodes = [];
-       nodes[0]= {key: 1, value: "record#1"};
-       nodes[1]= {key: 2, value: "record#2"};
-       nodes[2]= {key: 3, value: "record#3"};
-       nodes[3]= {key: "a", value: "record#a"};
+       nodes[0]= {key: 1, data: "record#1"};
+       nodes[1]= {key: 2, data: "record#2"};
+       nodes[2]= {key: 3, data: "record#3"};
+       nodes[3]= {key: "a", data: "record#a"};
        result =  global.setchildnodes(nodes, {});
 
 This will create the following data nodes in the DB Server:
@@ -637,10 +640,10 @@ Example 2 (using partial keys):
 
        global = new mglobal(db, 'MyGlobal', "a");
        const nodes = [];
-       nodes[0]= {key: 1, value: "record#1"};
-       nodes[1]= {key: 2, value: "record#2"};
-       nodes[2]= {key: 3, value: "record#3"};
-       nodes[2]= {key: "a", value: "record#a"};
+       nodes[0]= {key: 1, data: "record#1"};
+       nodes[1]= {key: 2, data: "record#2"};
+       nodes[2]= {key: 3, data: "record#3"};
+       nodes[2]= {key: "a", data: "record#a"};
        result =  global.setchildnodes("b", nodes, {});
 
 This will create the following data nodes in the DB Server:
@@ -661,6 +664,8 @@ Where:
 	* **max**: the maximum number of nodes to return. A default maximum of 100 records is automatically applied.
 	* **start**: start from this key value.
 	* **end**: finish at this key value.
+	* **lock**: if **true**, acquire a lock on the target DB data node before proceeding.
+	* **locktimeout**: timeout for the lock operation (in seconds).
 
 Child node data will re returned in an array, each element of which has the following form:
 
@@ -673,6 +678,7 @@ The following examples are based on the DB Server data set:
        ^MyGlobal("a","b",1)="record#1"
        ^MyGlobal("a","b",2)="record#2"
        ^MyGlobal("a","b",3)="record#3"
+       ^MyGlobal("a","b",4,1)="record#4,1"
        ^MyGlobal("a","b","a")="record#a"
 
 Example 1 (return all key values):
@@ -685,7 +691,8 @@ The following JavaScript array will be returned:
        result[0] = 1
        result[1] = 2
        result[2] = 3
-       result[3] = "a"
+       result[3] = 4
+       result[4] = "a"
 
 Example 2 (return all key values and the associated data):
 
@@ -697,7 +704,8 @@ The following JavaScript array will be returned:
        result[0] = {key: 1, data: "record#1}
        result[1] = {key: 2, data: "record#2}
        result[2] = {key: 3, data: "record#3}
-       result[3] = {key: "a", data: "record#a}
+       result[3] = {key: 4}
+       result[4] = {key: "a", data: "record#a}
 
 Example 3 (specifying start and end key values):
 
@@ -1173,3 +1181,8 @@ Unless required by applicable law or agreed to in writing, software distributed 
 ### v1.5.11 (7 October 2024)
 
 * Introduce support for the **setchildnodes()** and **getchildnodes()** methods.
+
+### v1.5.12 (9 October 2024)
+
+* Include an option to lock the target global for the **setchildnodes()** and **getchildnodes()** methods.
+* For cases where data doesn't exist for a DB node, the **getchildnodes()** method will not create a 'data' property.
