@@ -43,7 +43,7 @@ else {
 
 const DBX_VERSION_MAJOR       = 1;
 const DBX_VERSION_MINOR       = 5;
-const DBX_VERSION_BUILD       = 11;
+const DBX_VERSION_BUILD       = 12;
 
 const DBX_DSORT_INVALID       = 0;
 const DBX_DSORT_DATA          = 1;
@@ -937,7 +937,13 @@ class server {
       //console.log("mg_dbx_napi.js data_view data properties %d => %j", request.command, data_properties);
       if (data_properties.sort === DBX_DSORT_ERROR) {
          if (data_properties.len === 0) {
-            request.error_message = ""
+           request.error_message = "Database Error"
+         }
+         else if (data_properties.len > 0) { // v1.5.12
+           request.error_message = Buffer.from(pbuffer.slice(5, 5 + data_properties.len)).toString();
+           if (request.error_message === "") {
+             request.error_message = "Database Error";
+           }
          }
          else {
             request.error_message = pdata;
@@ -985,7 +991,12 @@ class server {
               data = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString();
               //console.log("n=" + n + "; mod=" + mod + " ; key=" + key + "; data=" + data);
               if (request.mode == 1) {
-                request.result_data.push({ "key": key, "data": data });
+                if (data_properties.type === DBX_DTYPE_NULL) {
+                  request.result_data.push({ "key": key});
+                }
+                else {
+                  request.result_data.push({ "key": key, "data": data });
+                }
               }
               else {
                 request.result_data.push(key);
@@ -1383,17 +1394,32 @@ class mglobal {
     
      let argn = args.length;
       if (argn < 2) {
+        result.error_message = "The setchildnodes() method must have at least two inputs";
         return "";
       }
       if (typeof args[argn - 1] != "object" || typeof args[argn - 2] != "object") {
+        result.error_message = "The last input to the setchildnodes() method must be the 'options' object";
         return "";
       }
       if (Array.isArray(args[argn - 2]) === false) {
+        result.error_message = "The penultimate input to the setchildnodes() method must be the data array";
         return "";
       }
+      let options = "";
+      if (args[argn - 1].hasOwnProperty('lock') && args[argn - 1].lock === true) { // v1.5.12
+        options = options + "lock:1\r\n";
+      }
+      if (args[argn - 1].hasOwnProperty('locktimeout')) {
+        options = options + "locktimeout:" + args[argn - 1].locktimeout + "\r\n";
+      }
+
+      if (options.length > 0) {
+        options = options + "\r\n";
+      }
+
       let arrayn = argn - 2;
       let key = "";
-      let value = "";
+      let data = "";
 
       let bidx = this.db.get_buffer();
       offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
@@ -1406,8 +1432,7 @@ class mglobal {
           offset = block_add_string(this.db.buffer[bidx], offset, key, key.length, DBX_DSORT_SUBSCRIPT, DBX_DTYPE_STR, this.db.utf16);
         }
       }
-      offset = block_add_string(this.db.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR, 0)
-      let options = "";
+      offset = block_add_string(this.db.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR, 0);
       offset = block_add_string(this.db.buffer[bidx], offset, options, options.length, DBX_DSORT_DATA, DBX_DTYPE_STR, this.db.utf16);
       let nnodes = args[arrayn].length;
 
@@ -1416,13 +1441,13 @@ class mglobal {
           key = args[arrayn][n].key.toString();
         else
           key = args[arrayn][n].key;
-        if (typeof args[arrayn][n].value === 'number')
-          value = args[arrayn][n].value.toString();
+        if (typeof args[arrayn][n].data === 'number')
+          data = args[arrayn][n].data.toString();
         else
-          value = args[arrayn][n].value;
+          data = args[arrayn][n].data;
 
         offset = block_add_string(this.db.buffer[bidx], offset, key, key.length, DBX_DSORT_SUBSCRIPT, DBX_DTYPE_STR, this.db.utf16);
-        offset = block_add_string(this.db.buffer[bidx], offset, value, value.length, DBX_DSORT_DATA, DBX_DTYPE_STR, this.db.utf16);
+        offset = block_add_string(this.db.buffer[bidx], offset, data, data.length, DBX_DSORT_DATA, DBX_DTYPE_STR, this.db.utf16);
       }
       offset = block_add_string(this.db.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR, 0)
       add_head(this.db.buffer[bidx], 0, offset, request.command);
@@ -1449,9 +1474,11 @@ class mglobal {
  
       let argn = args.length;
       if (argn < 1) {
+        result.error_message = "The getchildnodes() method must have at least one input";
         return "";
       }
       if (typeof args[argn - 1] != "object") {
+        result.error_message = "The last input to the getchildnodes() method must be the 'options' object";
         return "";
       }
 
@@ -1469,6 +1496,13 @@ class mglobal {
       if (args[argn - 1].hasOwnProperty('end')) {
         options = options + "end:" + args[argn - 1].end + "\r\n";
       }
+      if (args[argn - 1].hasOwnProperty('lock') && args[argn - 1].lock === true) { // v1.5.12
+        options = options + "lock:1\r\n";
+      }
+      if (args[argn - 1].hasOwnProperty('locktimeout')) {
+        options = options + "locktimeout:" + args[argn - 1].locktimeout + "\r\n";
+      }
+
       if (options.length > 0) {
         options = options + "\r\n";
       }
