@@ -43,7 +43,7 @@ else {
 
 const DBX_VERSION_MAJOR       = 1;
 const DBX_VERSION_MINOR       = 5;
-const DBX_VERSION_BUILD       = 12;
+const DBX_VERSION_BUILD       = 13;
 
 const DBX_DSORT_INVALID       = 0;
 const DBX_DSORT_DATA          = 1;
@@ -998,6 +998,14 @@ class server {
                   request.result_data.push({ "key": key, "data": data });
                 }
               }
+              else if (request.mode == 2) {
+                if (data_properties.type === DBX_DTYPE_NULL) {
+                  request.result_data[key] = undefined;
+                }
+                else {
+                  request.result_data[key] = data;
+                }
+              }
               else {
                 request.result_data.push(key);
               }
@@ -1386,45 +1394,61 @@ class mglobal {
     // v1.5.11
     setchildnodes(...args) {
       let offset = 0;
+      let numerickeys = false;
       let request = { command: DBX_CMND_GSETCHILDNODES, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.db.init === 0) {
         return "";
       }
     
-     let argn = args.length;
-      if (argn < 2) {
-        result.error_message = "The setchildnodes() method must have at least two inputs";
+      let argn = args.length;
+      let arrayn = 0;
+      let optionsn = 0;
+
+      if (argn < 1) {
+        this.db.error_message = "The setchildnodes() method must have at least one input";
         return "";
-      }
-      if (typeof args[argn - 1] != "object" || typeof args[argn - 2] != "object") {
-        result.error_message = "The last input to the setchildnodes() method must be the 'options' object";
-        return "";
-      }
-      if (Array.isArray(args[argn - 2]) === false) {
-        result.error_message = "The penultimate input to the setchildnodes() method must be the data array";
-        return "";
-      }
-      let options = "";
-      if (args[argn - 1].hasOwnProperty('lock') && args[argn - 1].lock === true) { // v1.5.12
-        options = options + "lock:1\r\n";
-      }
-      if (args[argn - 1].hasOwnProperty('locktimeout')) {
-        options = options + "locktimeout:" + args[argn - 1].locktimeout + "\r\n";
       }
 
+      if (Array.isArray(args[argn - 1]) === true) {
+        arrayn = argn - 1;
+      }
+      else {
+        if (typeof args[argn - 1] == "object") {
+          optionsn = argn - 1;
+        }
+        arrayn = argn - 2;
+      }
+
+      if (Array.isArray(args[arrayn]) === false) {
+        this.db.error_message = "Missing data array";
+        return "";
+      }
+
+      let options = "";
+      if (optionsn > 0) {
+        if (args[argn - 1].hasOwnProperty('lock') && args[argn - 1].lock === true) { // v1.5.12
+          options = options + "lock:1\r\n";
+        }
+        if (args[argn - 1].hasOwnProperty('locktimeout')) {
+          options = options + "locktimeout:" + args[argn - 1].locktimeout + "\r\n";
+        }
+        if (args[argn - 1].hasOwnProperty('numerickeys') && args[argn - 1].numerickeys === true) { // v1.5.12
+          options = options + "numerickeys:1\r\n";
+          numerickeys = true;
+        }
+      }
       if (options.length > 0) {
         options = options + "\r\n";
       }
 
-      let arrayn = argn - 2;
       let key = "";
       let data = "";
 
       let bidx = this.db.get_buffer();
       offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
-      if (argn > 2) {
-        for (let n = 0; n < (argn - 2); n++) {
+      if (argn > 1) {
+        for (let n = 0; n < arrayn; n++) {
           if (typeof args[n] === 'number')
             key = args[n].toString();
           else
@@ -1437,16 +1461,45 @@ class mglobal {
       let nnodes = args[arrayn].length;
 
       for (let n = 0; n < nnodes; n++) {
-        if (typeof args[arrayn][n].key === 'number')
-          key = args[arrayn][n].key.toString();
-        else
-          key = args[arrayn][n].key;
-        if (typeof args[arrayn][n].data === 'number')
-          data = args[arrayn][n].data.toString();
-        else
-          data = args[arrayn][n].data;
+        if (typeof args[arrayn][n] === 'undefined') {
+          continue;
+        }
+        key = "";
+        data = "";
+        if (numerickeys === true) {
+          key = n.toString();
+          data = args[arrayn][n];
+          offset = block_add_string(this.db.buffer[bidx], offset, key, key.length, DBX_DSORT_SUBSCRIPT, DBX_DTYPE_STR, this.db.utf16);
+        }
+        else {
+          if (args[arrayn][n].hasOwnProperty('data')) {
+            if (typeof args[arrayn][n].data === 'number')
+              data = args[arrayn][n].data.toString();
+            else
+              data = args[arrayn][n].data;
+          }
+          if (args[arrayn][n].hasOwnProperty('key')) {
+            if (Array.isArray(args[arrayn][n].key) === true) {
+              for (let n1 = 0; n1 < args[arrayn][n].key.length; n1++) {
+                if (typeof args[arrayn][n].key[n1] === 'number')
+                  key = args[arrayn][n].key[n1].toString();
+                else
+                  key = args[arrayn][n].key[n1];
+                offset = block_add_string(this.db.buffer[bidx], offset, key, key.length, DBX_DSORT_SUBSCRIPT, DBX_DTYPE_STR, this.db.utf16);
+              }
+            }
+            else {
+              if (typeof args[arrayn][n].key === 'number')
+                key = args[arrayn][n].key.toString();
+              else
+                key = args[arrayn][n].key;
 
-        offset = block_add_string(this.db.buffer[bidx], offset, key, key.length, DBX_DSORT_SUBSCRIPT, DBX_DTYPE_STR, this.db.utf16);
+              offset = block_add_string(this.db.buffer[bidx], offset, key, key.length, DBX_DSORT_SUBSCRIPT, DBX_DTYPE_STR, this.db.utf16);
+            }
+          }
+        }
+        //console.log("key=" + key + "; data=" + data);
+        //offset = block_add_string(this.db.buffer[bidx], offset, key, key.length, DBX_DSORT_SUBSCRIPT, DBX_DTYPE_STR, this.db.utf16);
         offset = block_add_string(this.db.buffer[bidx], offset, data, data.length, DBX_DSORT_DATA, DBX_DTYPE_STR, this.db.utf16);
       }
       offset = block_add_string(this.db.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR, 0)
@@ -1466,6 +1519,7 @@ class mglobal {
     // v1.5.11
     getchildnodes(...args) {
       let offset = 0;
+      let numerickeys = false;
       let request = { command: DBX_CMND_GGETCHILDNODES, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       if (this.db.init === 0) {
@@ -1473,38 +1527,39 @@ class mglobal {
       }
  
       let argn = args.length;
-      if (argn < 1) {
-        result.error_message = "The getchildnodes() method must have at least one input";
-        return "";
-      }
-      if (typeof args[argn - 1] != "object") {
-        result.error_message = "The last input to the getchildnodes() method must be the 'options' object";
-        return "";
-      }
+      let optionsn = argn;
 
       let options = "";
-      if (args[argn - 1].hasOwnProperty('getdata') && args[argn - 1].getdata === true) {
-        options = options + "getdata:1\r\n";
-        request.mode = 1;
-      }
-      if (args[argn - 1].hasOwnProperty('max')) {
-        options = options + "max:" + args[argn - 1].max + "\r\n";
-      }
-      if (args[argn - 1].hasOwnProperty('start')) {
-        options = options + "start:" + args[argn - 1].start + "\r\n";
-      }
-      if (args[argn - 1].hasOwnProperty('end')) {
-        options = options + "end:" + args[argn - 1].end + "\r\n";
-      }
-      if (args[argn - 1].hasOwnProperty('lock') && args[argn - 1].lock === true) { // v1.5.12
-        options = options + "lock:1\r\n";
-      }
-      if (args[argn - 1].hasOwnProperty('locktimeout')) {
-        options = options + "locktimeout:" + args[argn - 1].locktimeout + "\r\n";
+      if (typeof args[argn - 1] === "object") {
+        if (args[argn - 1].hasOwnProperty('getdata') && args[argn - 1].getdata === true) {
+          options = options + "getdata:1\r\n";
+          request.mode = 1;
+        }
+        if (args[argn - 1].hasOwnProperty('max')) {
+          options = options + "max:" + args[argn - 1].max + "\r\n";
+        }
+        if (args[argn - 1].hasOwnProperty('start')) {
+          options = options + "start:" + args[argn - 1].start + "\r\n";
+        }
+        if (args[argn - 1].hasOwnProperty('end')) {
+          options = options + "end:" + args[argn - 1].end + "\r\n";
+        }
+        if (args[argn - 1].hasOwnProperty('lock') && args[argn - 1].lock === true) { // v1.5.12
+          options = options + "lock:1\r\n";
+        }
+        if (args[argn - 1].hasOwnProperty('locktimeout')) {
+          options = options + "locktimeout:" + args[argn - 1].locktimeout + "\r\n";
+        }
+        if (args[argn - 1].hasOwnProperty('numerickeys') && args[argn - 1].numerickeys === true) { // v1.5.12
+          options = options + "numerickeys:1\r\n";
+          numerickeys = true;
+          request.mode = 2;
+        }
       }
 
       if (options.length > 0) {
         options = options + "\r\n";
+        optionsn = argn - 1;
       }
 
       let key = "";
@@ -1513,7 +1568,7 @@ class mglobal {
       let bidx = this.db.get_buffer();
       offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
       if (argn > 1) {
-        for (let n = 0; n < (argn - 1); n++) {
+        for (let n = 0; n < optionsn; n++) {
           if (typeof args[n] === 'number')
             key = args[n].toString();
           else
