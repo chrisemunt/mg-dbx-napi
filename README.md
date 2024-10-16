@@ -3,7 +3,7 @@
 High speed Synchronous and Asynchronous access to InterSystems Cache/IRIS and YottaDB from Node.js or Bun.
 
 Chris Munt <cmunt@mgateway.com>  
-9 October 2024, MGateway Ltd [http://www.mgateway.com](http://www.mgateway.com)
+16 October 2024, MGateway Ltd [http://www.mgateway.com](http://www.mgateway.com)
 
 * Verified to work with Node.js and the Bun JavaScript engine.
 * Two connectivity models to the InterSystems or YottaDB database are provided: High performance via the local database API or network based.
@@ -605,29 +605,32 @@ Alternatively:
 
 ### Create a set of child data nodes in the DB Server
 
+_Status: Beta release._
+
        var result = mglobal.setchildnodes([<partialkey...>,] <[childnodes]>, <{options}>);
 
 Where:
 
 * **childnodes**: an array of child data nodes.  Each element has the following form:
 
-        {key: <keys value>, data: <data value>}
+        {key: <keys value(s)>, data: <data value>}
 
 
 * **options**: A JSON object in which the following options can be defined:
 	* **lock**: if **true**, acquire a lock on the target DB data node before proceeding.
 	* **locktimeout**: timeout for the lock operation (in seconds).
+	* **numerickeys**: Treat the dataset as a numerically-keyed JavaScript array.
 
 
 Example 1:
 
        global = new mglobal(db, 'MyGlobal');
        const nodes = [];
-       nodes[0]= {key: 1, data: "record#1"};
-       nodes[1]= {key: 2, data: "record#2"};
-       nodes[2]= {key: 3, data: "record#3"};
-       nodes[3]= {key: "a", data: "record#a"};
-       result =  global.setchildnodes(nodes, {});
+       nodes[0] = {key: 1, data: "record#1"};
+       nodes[1] = {key: 2, data: "record#2"};
+       nodes[2] = {key: 3, data: "record#3"};
+       nodes[3] = {key: "a", data: "record#a"};
+       result = global.setchildnodes(nodes, {});
 
 This will create the following data nodes in the DB Server:
 
@@ -640,11 +643,11 @@ Example 2 (using partial keys):
 
        global = new mglobal(db, 'MyGlobal', "a");
        const nodes = [];
-       nodes[0]= {key: 1, data: "record#1"};
-       nodes[1]= {key: 2, data: "record#2"};
-       nodes[2]= {key: 3, data: "record#3"};
-       nodes[2]= {key: "a", data: "record#a"};
-       result =  global.setchildnodes("b", nodes, {});
+       nodes[0] = {key: 1, data: "record#1"};
+       nodes[1] = {key: 2, data: "record#2"};
+       nodes[2] = {key: 3, data: "record#3"};
+       nodes[2] = {key: "a", data: "record#a"};
+       result = global.setchildnodes("b", nodes, {});
 
 This will create the following data nodes in the DB Server:
 
@@ -653,7 +656,37 @@ This will create the following data nodes in the DB Server:
        ^MyGlobal("a","b",3)="record#3"
        ^MyGlobal("a","b","a")="record#a"
 
+Example 3 (specifying multiple key values in an array):
+
+       global = new mglobal(db, 'MyGlobal');
+       const nodes = [];
+       nodes[0] = {key: 1, data: "record#1"};
+       nodes[1] = {key: [1, 2, "c"], data: "three keys"};
+       result = global.setchildnodes(nodes, {});
+
+This will create the following data nodes in the DB Server:
+
+       ^MyGlobal(1)="record#1"
+       ^MyGlobal(1,2,"c")="three keys"
+
+Example 4 (using numeric keys):
+
+       global = new mglobal(db, 'MyGlobal');
+       const nodes = [];
+       nodes[0] = "record#1";
+       nodes[1] = "record#2";
+       nodes[2] = "record#3};
+       result = global.setchildnodes(nodes, {numerickeys: true});
+
+This will create the following data nodes in the DB Server:
+
+       ^MyGlobal(0)="record#1"
+       ^MyGlobal(1)="record#2"
+       ^MyGlobal(2)="record#3"
+
 ### Retrieve a set of child data nodes from the DB Server
+
+_Status: Beta release._
 
        var result = mglobal.getchildnodes([<partialkey...>,], <{options}>);
 
@@ -666,6 +699,7 @@ Where:
 	* **end**: finish at this key value.
 	* **lock**: if **true**, acquire a lock on the target DB data node before proceeding.
 	* **locktimeout**: timeout for the lock operation (in seconds).
+	* **numerickeys**: Treat the dataset as a numerically-keyed JavaScript array.
 
 Child node data will re returned in an array, each element of which has the following form:
 
@@ -716,6 +750,31 @@ The following JavaScript array will be returned:
 
        result[1] = {key: 2, data: "record#2}
        result[2] = {key: 3, data: "record#3}
+
+Example 4 (using numeric keys):
+
+For the following dataset contained in the DB Server:
+
+       ^MyGlobal(0)="record#1"
+       ^MyGlobal(1)="record#2"
+       ^MyGlobal(2)="record#3"
+       ^MyGlobal(3,1)="record#3,1"
+
+JavaScript:
+
+       global = new mglobal(db, 'MyGlobal');
+       result = global.getchildnodes({numerickeys: true});
+
+This will return the following JavaScript array:
+
+       result[0] = "record#1"
+       result[1] = "record#2"
+       result[2] = "record#3"
+       result[3] = undefined
+
+Note that JavaScript **undefined** is returned for nodes where there's no data defined at the current key-level, but data defined at a lower (i.e. descendant) key-level.
+
+Data nodes are returned up to the point at which the key is undefined, or the value defined in the **end** option is reached (whichever comes first).  
 
 ## <a name="cursors"></a> Cursor based data retrieval
 
@@ -1186,3 +1245,10 @@ Unless required by applicable law or agreed to in writing, software distributed 
 
 * Include an option to lock the target global for the **setchildnodes()** and **getchildnodes()** methods.
 * For cases where data doesn't exist for a DB node, the **getchildnodes()** method will not create a 'data' property.
+
+### v1.5.13 (16 October 2024)
+
+* Introduce the concept of **numerickeys** for the **setchildnodes()** and **getchildnodes()** methods.
+	* This is a facility for storing and retrieving (in or from the DB Server) data held in numerically-keyed JavaScript arrays.
+* Allow multiple key values to be specified (as a JavaScript array) in the **setchildnodes()** method.
+* Include a minor optimisation for the YottaDB implementation of the **getchildnodes()** method.
