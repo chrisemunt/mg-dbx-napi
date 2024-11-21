@@ -26,21 +26,21 @@
 //   ----------------------------------------------------------------------------
 //
 
-let dbx;
+//let dbx;
 let arch = process.arch;
 if (arch === 'x64' && process.platform === 'win32') arch = 'win';
 if (['win', 'arm64', 'x64'].includes(arch)) {
-   dbx = require('mg-dbx-napi/' + arch);
+   //dbx = require('mg-dbx-napi/' + arch);
 }
 else {
    // throw an error - platform not supported
 }
 
-//const dbx = require('./mg-dbx-napi.node');
+const dbx = require('./mg-dbx-napi.node');
 
 const DBX_VERSION_MAJOR: number      = 1;
-const DBX_VERSION_MINOR: number      = 5;
-const DBX_VERSION_BUILD: number      = 13;
+const DBX_VERSION_MINOR: number      = 6;
+const DBX_VERSION_BUILD: number      = 14;
 
 const DBX_DSORT_INVALID: number      = 0;
 const DBX_DSORT_DATA: number         = 1;
@@ -133,6 +133,8 @@ class server {
    server_software: string = "";
    error_message: string = "";
    chset: string = "utf-8";
+   chsetjs: string = "utf8";
+   binary:number = 0;
    use: string = "";
    timeout: number = 60;
    init: number = 0;
@@ -173,15 +175,7 @@ class server {
       let request = { command: DBX_CMND_CHARSET, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
       chset.toLowerCase();
-      if (chset === 'utf-8' || chset === 'utf-16' || chset === 'ascii') {
-         this.chset = chset;
-      }
-      if (this.chset === 'utf-16') {
-         this.utf16 = true;
-      }
-      else {
-         this.utf16 = false;
-      }
+      this.setcharset(chset);
 
       if (this.init === 0) {
          return this.chset();
@@ -194,11 +188,39 @@ class server {
       offset = block_add_string(this.buffer[bidx], offset, chset, chset.length, DBX_DSORT_DATA, DBX_DTYPE_STR, this.utf16);
       offset = block_add_string(this.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR, this.utf16);
       add_head(this.buffer[bidx], 0, offset, request.command);
-      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, this.binary);
       this.get_result(this.buffer[bidx], pdata, request);
       this.release_buffer(bidx);
 
       return request.result_data;
+   }
+
+   setcharset(chset: string): number {
+      if (chset === 'utf-8') {
+         this.chset = chset;
+         this.chsetjs = 'utf8';
+         this.binary = 0;
+         this.utf16 = false;
+      }
+      else if (chset === 'utf-16') {
+         this.chset = chset;
+         this.chsetjs = 'utf8'; // will be translated to utf8
+         this.binary = 0;
+         this.utf16 = true;
+      }
+      else if (chset === 'ascii' || chset === 'binary') {
+         this.chset = chset;
+         this.chsetjs = 'binary';
+         this.binary = 1;
+         this.utf16 = false;
+      }
+      else {
+         this.chset = chset;
+         this.chsetjs = 'utf8';
+         this.binary = 0;
+         this.utf16 = false;
+      }
+      return 0;
    }
 
    settimeout(ntimeout: number): number {
@@ -220,7 +242,7 @@ class server {
       offset = block_add_string(this.buffer[bidx], offset, ntimeout.toString(), ntimeout.toString().length, DBX_DSORT_DATA, DBX_DTYPE_INT, this.utf16);
       offset = block_add_string(this.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR, 0);
       add_head(this.buffer[bidx], 0, offset, request.command);
-      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, this.binary);
       this.get_result(this.buffer[bidx], pdata, request);
       this.release_buffer(bidx);
 
@@ -330,11 +352,11 @@ class server {
       add_head(this.buffer[bidx], 0, offset, request.command);
 
       if (request.async) {
-         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this, this.buffer[bidx], offset, request, this.binary, args[request.argc]);
          return null;
       }
 
-      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, this.binary);
       this.get_result(this.buffer[bidx], pdata, request);
       this.release_buffer(bidx);
 
@@ -366,11 +388,11 @@ class server {
       add_head(this.buffer[bidx], 0, offset, request.command);
 
       if (request.async) {
-         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this, this.buffer[bidx], offset, request, this.binary, args[request.argc]);
          return null;
       }
 
-      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, this.binary);
       this.get_result(this.buffer[bidx], pdata, request);
       this.release_buffer(bidx);
 
@@ -396,21 +418,21 @@ class server {
       let bidx = this.get_buffer();
 
       if (args.length > 0) {
-        request.command = DBX_CMND_NSSET;
-        request.argc = 1;
-        offset = block_add_size(this.buffer[bidx], offset, offset, DBX_DSORT_DATA, DBX_DTYPE_INT);
-        offset = block_add_size(this.buffer[bidx], offset, this.buffer[bidx].length, DBX_DSORT_DATA, DBX_DTYPE_INT);
-        offset = block_add_size(this.buffer[bidx], offset, this.index, DBX_DSORT_DATA, DBX_DTYPE_INT);
+         request.command = DBX_CMND_NSSET;
+         request.argc = 1;
+         offset = block_add_size(this.buffer[bidx], offset, offset, DBX_DSORT_DATA, DBX_DTYPE_INT);
+         offset = block_add_size(this.buffer[bidx], offset, this.buffer[bidx].length, DBX_DSORT_DATA, DBX_DTYPE_INT);
+         offset = block_add_size(this.buffer[bidx], offset, this.index, DBX_DSORT_DATA, DBX_DTYPE_INT);
 
-        offset = block_add_string(this.buffer[bidx], offset, args[0], args[0].length, DBX_DSORT_DATA, DBX_DTYPE_STR, this.utf16);
-        offset = block_add_string(this.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR, 0);
-        add_head(this.buffer[bidx], 0, offset, request.command);
+         offset = block_add_string(this.buffer[bidx], offset, args[0], args[0].length, DBX_DSORT_DATA, DBX_DTYPE_STR, this.utf16);
+         offset = block_add_string(this.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR, 0);
+         add_head(this.buffer[bidx], 0, offset, request.command);
 
-        const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
-        this.get_result(this.buffer[bidx], pdata, request);
-        this.release_buffer(bidx);
+         const pdata = dbx.command(this.buffer[bidx], offset, request.command, this.binary);
+         this.get_result(this.buffer[bidx], pdata, request);
+         this.release_buffer(bidx);
 
-        return request.result_data;
+         return request.result_data;
 
       }
 
@@ -425,11 +447,11 @@ class server {
       add_head(this.buffer[bidx], 0, offset, request.command);
 
       if (request.async) {
-         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this, this.buffer[bidx], offset, request, this.binary, args[request.argc]);
          return null;
       }
 
-      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, this.binary);
       this.get_result(this.buffer[bidx], pdata, request);
       this.release_buffer(bidx);
 
@@ -447,10 +469,10 @@ class server {
       let bidx = this.get_buffer();
       offset = this.pack_arguments(this.buffer[bidx], offset, this.index, args, request, 0);
       if (request.async) {
-         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this, this.buffer[bidx], offset, request, this.binary, args[request.argc]);
          return null;
       }
-      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, this.binary);
       this.get_result(this.buffer[bidx], pdata, request);
       this.release_buffer(bidx);
 
@@ -468,10 +490,10 @@ class server {
       let bidx = this.get_buffer();
       offset = this.pack_arguments(this.buffer[bidx], offset, this.index, args, request, 0);
       if (request.async) {
-         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this, this.buffer[bidx], offset, request, this.binary, args[request.argc]);
          return null;
       }
-      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, this.binary);
       this.get_result(this.buffer[bidx], pdata, request);
       this.release_buffer(bidx);
 
@@ -489,10 +511,10 @@ class server {
       let bidx = this.get_buffer();
       offset = this.pack_arguments(this.buffer[bidx], offset, this.index, args, request, 0);
       if (request.async) {
-         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this, this.buffer[bidx], offset, request, this.binary, args[request.argc]);
          return null;
       }
-      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, this.binary);
       this.get_result(this.buffer[bidx], pdata, request);
       this.release_buffer(bidx);
 
@@ -510,10 +532,10 @@ class server {
       let bidx = this.get_buffer();
       offset = this.pack_arguments(this.buffer[bidx], offset, this.index, args, request, 0);
       if (request.async) {
-         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this, this.buffer[bidx], offset, request, this.binary, args[request.argc]);
          return null;
       }
-      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, this.binary);
       this.get_result(this.buffer[bidx], pdata, request);
       this.release_buffer(bidx);
 
@@ -531,10 +553,10 @@ class server {
       let bidx = this.get_buffer();
       offset = this.pack_arguments(this.buffer[bidx], offset, this.index, args, request, 0);
       if (request.async) {
-         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this, this.buffer[bidx], offset, request, this.binary, args[request.argc]);
          return null;
       }
-      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, this.binary);
       this.get_result(this.buffer[bidx], pdata, request);
       this.release_buffer(bidx);
 
@@ -552,10 +574,10 @@ class server {
       let bidx = this.get_buffer();
       offset = this.pack_arguments(this.buffer[bidx], offset, this.index, args, request, 0);
       if (request.async) {
-         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this, this.buffer[bidx], offset, request, this.binary, args[request.argc]);
          return null;
       }
-      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, this.binary);
       this.get_result(this.buffer[bidx], pdata, request);
       this.release_buffer(bidx);
 
@@ -573,10 +595,10 @@ class server {
       let bidx = this.get_buffer();
       offset = this.pack_arguments(this.buffer[bidx], offset, this.index, args, request, 0);
       if (request.async) {
-         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this, this.buffer[bidx], offset, request, this.binary, args[request.argc]);
          return null;
       }
-      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, this.binary);
       this.get_result(this.buffer[bidx], pdata, request);
       this.release_buffer(bidx);
 
@@ -594,10 +616,10 @@ class server {
       let bidx = this.get_buffer();
       offset = this.pack_arguments(this.buffer[bidx], offset, this.index, args, request, 0);
       if (request.async) {
-         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this, this.buffer[bidx], offset, request, this.binary, args[request.argc]);
          return null;
       }
-      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, this.binary);
       this.get_result(this.buffer[bidx], pdata, request);
       this.release_buffer(bidx);
 
@@ -615,10 +637,10 @@ class server {
       let bidx = this.get_buffer();
       offset = this.pack_arguments(this.buffer[bidx], offset, this.index, args, request, 0);
       if (request.async) {
-         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this, this.buffer[bidx], offset, request, this.binary, args[request.argc]);
          return null;
       }
-      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, this.binary);
       this.get_result(this.buffer[bidx], pdata, request);
       this.release_buffer(bidx);
 
@@ -649,10 +671,10 @@ class server {
       offset = block_add_string(this.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR, 0);
       add_head(this.buffer[bidx], 0, offset, request.command);
       if (request.async) {
-         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this, this.buffer[bidx], offset, request, this.binary, args[request.argc]);
          return null;
       }
-      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, this.binary);
       this.get_result(this.buffer[bidx], pdata, request);
       this.release_buffer(bidx);
 
@@ -683,10 +705,10 @@ class server {
       offset = block_add_string(this.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR, 0);
       add_head(this.buffer[bidx], 0, offset, request.command);
       if (request.async) {
-         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this, this.buffer[bidx], offset, request, this.binary, args[request.argc]);
          return null;
       }
-      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, this.binary);
       this.get_result(this.buffer[bidx], pdata, request);
       this.release_buffer(bidx);
 
@@ -717,10 +739,10 @@ class server {
       offset = block_add_string(this.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR, 0);
       add_head(this.buffer[bidx], 0, offset, request.command);
       if (request.async) {
-         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this, this.buffer[bidx], offset, request, this.binary, args[request.argc]);
          return null;
       }
-      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, this.binary);
       this.get_result(this.buffer[bidx], pdata, request);
       this.release_buffer(bidx);
 
@@ -751,10 +773,10 @@ class server {
       offset = block_add_string(this.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR, 0);
       add_head(this.buffer[bidx], 0, offset, request.command);
       if (request.async) {
-         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this, this.buffer[bidx], offset, request, this.binary, args[request.argc]);
          return null;
       }
-      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, this.binary);
       this.get_result(this.buffer[bidx], pdata, request);
       this.release_buffer(bidx);
 
@@ -772,10 +794,10 @@ class server {
       let bidx = this.get_buffer();
       offset = this.pack_arguments(this.buffer[bidx], offset, this.index, args, request, 0);
       if (request.async) {
-         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this, this.buffer[bidx], offset, request, this.binary, args[request.argc]);
          return null;
       }
-      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, this.binary);
       this.get_result(this.buffer[bidx], pdata, request);
       this.release_buffer(bidx);
 
@@ -800,10 +822,10 @@ class server {
       let bidx = this.get_buffer();
       offset = this.pack_arguments(this.buffer[bidx], offset, this.index, args, request, 0);
       if (request.async) {
-         async_command(this, this.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this, this.buffer[bidx], offset, request, this.binary, args[request.argc]);
          return null;
       }
-      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, this.binary);
       this.db.get_result(this.buffer[bidx], pdata, request);
       this.release_buffer(bidx);
 
@@ -937,13 +959,13 @@ class server {
 
       if (data_properties.sort === DBX_DSORT_ERROR) {
          if (data_properties.len === 0) {
-           request.error_message = "Database Error"
+            request.error_message = "Database Error"
          }
          else if (data_properties.len > 0) { // v1.5.12
-           request.error_message = Buffer.from(pbuffer.slice(5, 5 + data_properties.len)).toString();
-           if (request.error_message === "") {
-             request.error_message = "Database Error";
-           }
+            request.error_message = Buffer.from(pbuffer.slice(5, 5 + data_properties.len)).toString();
+            if (request.error_message === "") {
+               request.error_message = "Database Error";
+            }
          }
          else {
             request.error_message = pdata;
@@ -958,60 +980,66 @@ class server {
             request.result_data = ""
          }
          else {
-            request.result_data = pdata
+            if (this.binary) {  // v1.6.14
+               let offset = 5;
+               request.result_data = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString(this.chsetjs);
+            }
+            else {
+               request.result_data = pdata;
+            }
          }
          if (request.command === DBX_CMND_GNEXTDATA || request.command === DBX_CMND_GPREVIOUSDATA) {
             let offset = 5;
             block_get_size(pbuffer, offset, data_properties);
             offset += 5;
-            let data = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString();
+            let data = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString(this.chsetjs);
             offset += data_properties.len;
             block_get_size(pbuffer, offset, data_properties);
             offset += 5;
-            let key = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString();
+            let key = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString(this.chsetjs);
             request.result_data = { "key": key, "data": data };
          }
          else if (request.command === DBX_CMND_GGETCHILDNODES) { // v1.5.11
-           request.result_data = [];
-           let key = "";
-           let data = "";
-           let mod = 0;
-           let offset = 5;
-           for (let n = 0; ; n++) {
-             mod = n % 2;
-             block_get_size(pbuffer, offset, data_properties);
-             offset += 5;
-             if (data_properties.sort === DBX_DSORT_EOD) {
-               break;
-             }
-             if (mod === 0) {
-               key = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString();
-             }
-             else {
-               data = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString();
-               //console.log("n=" + n + "; mod=" + mod + " ; key=" + key + "; data=" + data);
-               if (request.mode == 1) {
-                  if (data_properties.type === DBX_DTYPE_NULL) {
-                    request.result_data.push({ "key": key });
-                  }
-                  else {
-                    request.result_data.push({ "key": key, "data": data });
-                  }
+            request.result_data = [];
+            let key = "";
+            let data = "";
+            let mod = 0;
+            let offset = 5;
+            for (let n = 0; ; n++) {
+               mod = n % 2;
+               block_get_size(pbuffer, offset, data_properties);
+               offset += 5;
+               if (data_properties.sort === DBX_DSORT_EOD) {
+                  break;
                }
-               else if (request.mode == 2) {
-                  if (data_properties.type === DBX_DTYPE_NULL) {
-                    request.result_data[key] = undefined;
-                  }
-                  else {
-                    request.result_data[key] = data;
-                  }
+               if (mod === 0) {
+                  key = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString(this.chsetjs);
                }
                else {
-                 request.result_data.push(key);
+                  data = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString(this.chsetjs);
+                  //console.log("n=" + n + "; mod=" + mod + " ; key=" + key + "; data=" + data);
+                  if (request.mode == 1) {
+                     if (data_properties.type === DBX_DTYPE_NULL) {
+                        request.result_data.push({ "key": key });
+                     }
+                     else {
+                        request.result_data.push({ "key": key, "data": data });
+                     }
+                  }
+                  else if (request.mode == 2) {
+                     if (data_properties.type === DBX_DTYPE_NULL) {
+                        request.result_data[key] = undefined;
+                     }
+                     else {
+                        request.result_data[key] = data;
+                     }
+                  }
+                  else {
+                     request.result_data.push(key);
+                  }
                }
-             }
-             offset += data_properties.len;
-           }
+               offset += data_properties.len;
+            }
          }
          else if (request.command === DBX_CMND_GNNODE || request.command === DBX_CMND_GNNODEDATA || request.command === DBX_CMND_GPNODE || request.command === DBX_CMND_GPNODEDATA) {
             let key = "";
@@ -1019,7 +1047,7 @@ class server {
             block_get_size(pbuffer, offset, data_properties);
             if (data_properties.sort != DBX_DSORT_EOD) {
                offset += 5;
-               let data = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString();
+               let data = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString(this.chsetjs);
                offset += data_properties.len;
                if (request.command === DBX_CMND_GNNODEDATA || request.command === DBX_CMND_GPNODEDATA) {
                   request.result_data = { "data": data, "key": [] };
@@ -1033,7 +1061,7 @@ class server {
                   if (data_properties.sort === DBX_DSORT_EOD) {
                      break;
                   }
-                  key = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString();
+                  key = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString(this.chsetjs);
                   offset += data_properties.len;
                   request.result_data.key.push(key);
                   if (keyn > 5) {
@@ -1050,7 +1078,7 @@ class server {
             block_get_size(pbuffer, offset, data_properties);
             //console.log("mg_dbx_napi.js SQL data properties => ", data_properties);
             offset += 5;
-            let data = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString();
+            let data = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString(this.chsetjs);
             offset += data_properties.len;
             if (data_properties.sort === DBX_DSORT_ERROR) {
                request.result_data = { "sqlcode": -1, "sqlstate": "HY000", "error": data, "columns": [] };
@@ -1061,7 +1089,7 @@ class server {
                for (let n = 0; n < sql_no_cols; n++) {
                   block_get_size(pbuffer, offset, data_properties);
                   offset += 5;
-                  data = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString();
+                  data = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString(this.chsetjs);
                   col_data = data.split("|");
                   request.result_data.columns.push({ "name": col_data[0], "type": col_data[1] });
                   offset += data_properties.len;
@@ -1077,7 +1105,7 @@ class server {
             block_get_size(pbuffer, offset, data_properties);
             //console.log("mg_dbx_napi.js SQL data properties => ", data_properties);
             offset += 5;
-            let data = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString();
+            let data = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString(this.chsetjs);
             offset += data_properties.len;
             if (data_properties.sort === DBX_DSORT_ERROR) {
                request.result_data = { "sqlcode": 0, "sqlstate": "", "error": data, "columns": [] };
@@ -1088,7 +1116,7 @@ class server {
                for (let n = 0; offset < (len + 5); n++) {
                   block_get_size(pbuffer, offset, data_properties);
                   offset += 5;
-                  data = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString();
+                  data = Buffer.from(pbuffer.slice(offset, offset + data_properties.len)).toString(this.chsetjs);
                   request.result_data.values.push(data);
                   offset += data_properties.len;
                }
@@ -1105,7 +1133,7 @@ class server {
 
       let bidx = this.get_buffer();
       offset = this.pack_arguments(this.buffer[bidx], offset, this.index, args, request, 0);
-      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, this.binary);
       this.get_result(this.buffer[bidx], pdata, request);
       this.release_buffer(bidx);
 
@@ -1124,7 +1152,7 @@ class server {
       offset = block_add_string(this.buffer[bidx], offset, title, title.length, DBX_DSORT_DATA, DBX_DTYPE_STR, 0);
       offset = block_add_string(this.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR, 0);
       add_head(this.buffer[bidx], 0, offset, request.command);
-      const pdata = dbx.command(this.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.buffer[bidx], offset, request.command, this.binary);
       this.get_result(this.buffer[bidx], pdata, request);
       this.release_buffer(bidx);
 
@@ -1164,10 +1192,10 @@ class mglobal {
       offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
       offset = this.db.pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, request, 1);
       if (request.async) {
-         async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this.db, this.db.buffer[bidx], offset, request, this.db.binary, args[request.argc]);
          return null;
       }
-      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, this.db.binary);
       this.db.get_result(this.db.buffer[bidx], pdata, request);
       this.db.release_buffer(bidx);
 
@@ -1186,10 +1214,10 @@ class mglobal {
       offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
       offset = this.db.pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, request, 1);
       if (request.async) {
-         async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this.db, this.db.buffer[bidx], offset, request, this.db.binary, args[request.argc]);
          return null;
       }
-      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, this.db.binary);
       this.db.get_result(this.db.buffer[bidx], pdata, request);
       this.db.release_buffer(bidx);
 
@@ -1208,10 +1236,10 @@ class mglobal {
       offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
       offset = this.db.pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, request, 1);
       if (request.async) {
-         async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this.db, this.db.buffer[bidx], offset, request, this.db.binary, args[request.argc]);
          return null;
       }
-      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, this.db.binary);
       this.db.get_result(this.db.buffer[bidx], pdata, request);
       this.db.release_buffer(bidx);
 
@@ -1230,10 +1258,10 @@ class mglobal {
       offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
       offset = this.db.pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, request, 1);
       if (request.async) {
-         async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this.db, this.db.buffer[bidx], offset, request, this.db.binary, args[request.argc]);
          return null;
       }
-      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, this.db.binary);
       this.db.get_result(this.db.buffer[bidx], pdata, request);
       this.db.release_buffer(bidx);
 
@@ -1252,10 +1280,10 @@ class mglobal {
       offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
       offset = this.db.pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, request, 1);
       if (request.async) {
-         async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this.db, this.db.buffer[bidx], offset, request, this.db.binary, args[request.argc]);
          return null;
       }
-      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, this.db.binary);
       this.db.get_result(this.db.buffer[bidx], pdata, request);
       this.db.release_buffer(bidx);
 
@@ -1274,10 +1302,10 @@ class mglobal {
       offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
       offset = this.db.pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, request, 1);
       if (request.async) {
-         async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this.db, this.db.buffer[bidx], offset, request, this.db.binary, args[request.argc]);
          return null;
       }
-      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, this.db.binary);
       this.db.get_result(this.db.buffer[bidx], pdata, request);
       this.db.release_buffer(bidx);
 
@@ -1296,10 +1324,10 @@ class mglobal {
       offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
       offset = this.db.pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, request, 1);
       if (request.async) {
-         async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this.db, this.db.buffer[bidx], offset, request, this.db.binary, args[request.argc]);
          return null;
       }
-      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, this.db.binary);
       this.db.get_result(this.db.buffer[bidx], pdata, request);
       this.db.release_buffer(bidx);
 
@@ -1318,10 +1346,10 @@ class mglobal {
       offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
       offset = this.db.pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, request, 1);
       if (request.async) {
-         async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this.db, this.db.buffer[bidx], offset, request, this.db.binary, args[request.argc]);
          return null;
       }
-      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, this.db.binary);
       this.db.get_result(this.db.buffer[bidx], pdata, request);
       this.db.release_buffer(bidx);
 
@@ -1340,10 +1368,10 @@ class mglobal {
       offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
       offset = this.db.pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, request, 1);
       if (request.async) {
-         async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this.db, this.db.buffer[bidx], offset, request, this.db.binary, args[request.argc]);
          return null;
       }
-      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, this.db.binary);
       this.db.get_result(this.db.buffer[bidx], pdata, request);
       this.db.release_buffer(bidx);
 
@@ -1380,217 +1408,217 @@ class mglobal {
       offset = block_add_string(this.db.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR, 0)
       add_head(this.db.buffer[bidx], 0, offset, request.command);
       if (request.async) {
-         async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this.db, this.db.buffer[bidx], offset, request, this.db.binary, args[request.argc]);
          return null;
       }
-      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, this.db.binary);
       this.db.get_result(this.db.buffer[bidx], pdata, request);
       this.db.release_buffer(bidx);
 
       return request.result_data;
    }
 
-  // v1.5.11
-  setchildnodes(...args: any[]): string {
-    let offset = 0;
-    let numerickeys = false;
-    let request = { command: DBX_CMND_GSETCHILDNODES, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
+   // v1.5.11
+   setchildnodes(...args: any[]): string {
+      let offset = 0;
+      let numerickeys = false;
+      let request = { command: DBX_CMND_GSETCHILDNODES, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
-    if (this.db.init === 0) {
-      return "";
-    }
-
-    let argn = args.length;
-    let arrayn = 0;
-    let optionsn = 0;
-
-    if (argn < 1) {
-      this.db.error_message = "The setchildnodes() method must have at least one input";
-      return "";
-    }
-
-    if (Array.isArray(args[argn - 1]) === true) {
-      arrayn = argn - 1;
-    }
-    else {
-      if (typeof args[argn - 1] == "object") {
-        optionsn = argn - 1;
+      if (this.db.init === 0) {
+         return "";
       }
-      arrayn = argn - 2;
-    }
 
-    if (Array.isArray(args[arrayn]) === false) {
-      this.db.error_message = "Missing data array";
-      return "";
-    }
+      let argn = args.length;
+      let arrayn = 0;
+      let optionsn = 0;
 
-    let options = "";
-    if (optionsn > 0) {
-      if (args[argn - 1].hasOwnProperty('lock') && args[argn - 1].lock === true) { // v1.5.12
-        options = options + "lock:1\r\n";
+      if (argn < 1) {
+         this.db.error_message = "The setchildnodes() method must have at least one input";
+         return "";
       }
-      if (args[argn - 1].hasOwnProperty('locktimeout')) {
-        options = options + "locktimeout:" + args[argn - 1].locktimeout + "\r\n";
-      }
-      if (args[argn - 1].hasOwnProperty('numerickeys') && args[argn - 1].numerickeys === true) { // v1.5.12
-        options = options + "numerickeys:1\r\n";
-        numerickeys = true;
-      }
-    }
-    if (options.length > 0) {
-      options = options + "\r\n";
-    }
 
-    let key = "";
-    let data = "";
-
-    let bidx = this.db.get_buffer();
-    offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
-    if (argn > 1) {
-      for (let n = 0; n < arrayn; n++) {
-        if (typeof args[n] === 'number')
-          key = args[n].toString();
-        else
-          key = args[n];
-        offset = block_add_string(this.db.buffer[bidx], offset, key, key.length, DBX_DSORT_SUBSCRIPT, DBX_DTYPE_STR, this.db.utf16);
-      }
-    }
-    offset = block_add_string(this.db.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR, 0);
-    offset = block_add_string(this.db.buffer[bidx], offset, options, options.length, DBX_DSORT_DATA, DBX_DTYPE_STR, this.db.utf16);
-    let nnodes = args[arrayn].length;
-
-    for (let n = 0; n < nnodes; n++) {
-      if (typeof args[arrayn][n] === 'undefined') {
-        continue;
-      }
-      key = "";
-      data = "";
-      if (numerickeys === true) {
-        key = n.toString();
-        data = args[arrayn][n];
-        offset = block_add_string(this.db.buffer[bidx], offset, key, key.length, DBX_DSORT_SUBSCRIPT, DBX_DTYPE_STR, this.db.utf16);
+      if (Array.isArray(args[argn - 1]) === true) {
+         arrayn = argn - 1;
       }
       else {
-        if (args[arrayn][n].hasOwnProperty('data')) {
-          if (typeof args[arrayn][n].data === 'number')
-            data = args[arrayn][n].data.toString();
-          else
-            data = args[arrayn][n].data;
-        }
-        if (args[arrayn][n].hasOwnProperty('key')) {
-          if (Array.isArray(args[arrayn][n].key) === true) {
-            for (let n1 = 0; n1 < args[arrayn][n].key.length; n1++) {
-              if (typeof args[arrayn][n].key[n1] === 'number')
-                key = args[arrayn][n].key[n1].toString();
-              else
-                key = args[arrayn][n].key[n1];
-              offset = block_add_string(this.db.buffer[bidx], offset, key, key.length, DBX_DSORT_SUBSCRIPT, DBX_DTYPE_STR, this.db.utf16);
-            }
-          }
-          else {
-            if (typeof args[arrayn][n].key === 'number')
-              key = args[arrayn][n].key.toString();
+         if (typeof args[argn - 1] == "object") {
+            optionsn = argn - 1;
+         }
+         arrayn = argn - 2;
+      }
+
+      if (Array.isArray(args[arrayn]) === false) {
+         this.db.error_message = "Missing data array";
+         return "";
+      }
+
+      let options = "";
+      if (optionsn > 0) {
+         if (args[argn - 1].hasOwnProperty('lock') && args[argn - 1].lock === true) { // v1.5.12
+            options = options + "lock:1\r\n";
+         }
+         if (args[argn - 1].hasOwnProperty('locktimeout')) {
+            options = options + "locktimeout:" + args[argn - 1].locktimeout + "\r\n";
+         }
+         if (args[argn - 1].hasOwnProperty('numerickeys') && args[argn - 1].numerickeys === true) { // v1.5.12
+            options = options + "numerickeys:1\r\n";
+            numerickeys = true;
+         }
+      }
+      if (options.length > 0) {
+         options = options + "\r\n";
+      }
+
+      let key = "";
+      let data = "";
+
+      let bidx = this.db.get_buffer();
+      offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
+      if (argn > 1) {
+         for (let n = 0; n < arrayn; n++) {
+            if (typeof args[n] === 'number')
+               key = args[n].toString();
             else
-              key = args[arrayn][n].key;
-
+               key = args[n];
             offset = block_add_string(this.db.buffer[bidx], offset, key, key.length, DBX_DSORT_SUBSCRIPT, DBX_DTYPE_STR, this.db.utf16);
-          }
-        }
+         }
       }
-      //console.log("key=" + key + "; data=" + data);
-      //offset = block_add_string(this.db.buffer[bidx], offset, key, key.length, DBX_DSORT_SUBSCRIPT, DBX_DTYPE_STR, this.db.utf16);
-      offset = block_add_string(this.db.buffer[bidx], offset, data, data.length, DBX_DSORT_DATA, DBX_DTYPE_STR, this.db.utf16);
-    }
-    offset = block_add_string(this.db.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR, 0)
-    add_head(this.db.buffer[bidx], 0, offset, request.command);
+      offset = block_add_string(this.db.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR, 0);
+      offset = block_add_string(this.db.buffer[bidx], offset, options, options.length, DBX_DSORT_DATA, DBX_DTYPE_STR, this.db.utf16);
+      let nnodes = args[arrayn].length;
 
-    if (request.async) {
-      async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
-      return null;
-    }
-    const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
-    this.db.get_result(this.db.buffer[bidx], pdata, request);
-    this.db.release_buffer(bidx);
+      for (let n = 0; n < nnodes; n++) {
+         if (typeof args[arrayn][n] === 'undefined') {
+            continue;
+         }
+         key = "";
+         data = "";
+         if (numerickeys === true) {
+            key = n.toString();
+            data = args[arrayn][n];
+            offset = block_add_string(this.db.buffer[bidx], offset, key, key.length, DBX_DSORT_SUBSCRIPT, DBX_DTYPE_STR, this.db.utf16);
+         }
+         else {
+            if (args[arrayn][n].hasOwnProperty('data')) {
+               if (typeof args[arrayn][n].data === 'number')
+                  data = args[arrayn][n].data.toString();
+               else
+                  data = args[arrayn][n].data;
+            }
+            if (args[arrayn][n].hasOwnProperty('key')) {
+               if (Array.isArray(args[arrayn][n].key) === true) {
+                  for (let n1 = 0; n1 < args[arrayn][n].key.length; n1++) {
+                     if (typeof args[arrayn][n].key[n1] === 'number')
+                        key = args[arrayn][n].key[n1].toString();
+                     else
+                        key = args[arrayn][n].key[n1];
+                     offset = block_add_string(this.db.buffer[bidx], offset, key, key.length, DBX_DSORT_SUBSCRIPT, DBX_DTYPE_STR, this.db.utf16);
+                  }
+               }
+               else {
+                  if (typeof args[arrayn][n].key === 'number')
+                     key = args[arrayn][n].key.toString();
+                  else
+                     key = args[arrayn][n].key;
 
-    return request.result_data;
-  }
-
-  // v1.5.11
-  getchildnodes(...args: any[]): string {
-    let offset = 0;
-    let numerickeys = false;
-    let request = { command: DBX_CMND_GGETCHILDNODES, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
-
-    if (this.db.init === 0) {
-      return "";
-    }
-
-    let argn = args.length;
-    let optionsn = argn;
-
-    let options = "";
-    if (typeof args[argn - 1] === "object") {
-      if (args[argn - 1].hasOwnProperty('getdata') && args[argn - 1].getdata === true) {
-        options = options + "getdata:1\r\n";
-        request.mode = 1;
+                  offset = block_add_string(this.db.buffer[bidx], offset, key, key.length, DBX_DSORT_SUBSCRIPT, DBX_DTYPE_STR, this.db.utf16);
+               }
+            }
+         }
+         //console.log("key=" + key + "; data=" + data);
+         //offset = block_add_string(this.db.buffer[bidx], offset, key, key.length, DBX_DSORT_SUBSCRIPT, DBX_DTYPE_STR, this.db.utf16);
+         offset = block_add_string(this.db.buffer[bidx], offset, data, data.length, DBX_DSORT_DATA, DBX_DTYPE_STR, this.db.utf16);
       }
-      if (args[argn - 1].hasOwnProperty('max')) {
-        options = options + "max:" + args[argn - 1].max + "\r\n";
-      }
-      if (args[argn - 1].hasOwnProperty('start')) {
-        options = options + "start:" + args[argn - 1].start + "\r\n";
-      }
-      if (args[argn - 1].hasOwnProperty('end')) {
-        options = options + "end:" + args[argn - 1].end + "\r\n";
-      }
-      if (args[argn - 1].hasOwnProperty('lock') && args[argn - 1].lock === true) { // v1.5.12
-        options = options + "lock:1\r\n";
-      }
-      if (args[argn - 1].hasOwnProperty('locktimeout')) {
-        options = options + "locktimeout:" + args[argn - 1].locktimeout + "\r\n";
-      }
-      if (args[argn - 1].hasOwnProperty('numerickeys') && args[argn - 1].numerickeys === true) { // v1.5.12
-        options = options + "numerickeys:1\r\n";
-        numerickeys = true;
-        request.mode = 2;
-      }
-    }
+      offset = block_add_string(this.db.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR, 0)
+      add_head(this.db.buffer[bidx], 0, offset, request.command);
 
-    if (options.length > 0) {
-      options = options + "\r\n";
-      optionsn = argn - 1;
-    }
-
-    let key = "";
-    let value = "";
-
-    let bidx = this.db.get_buffer();
-    offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
-    if (argn > 1) {
-      for (let n = 0; n < optionsn; n++) {
-        if (typeof args[n] === 'number')
-          key = args[n].toString();
-        else
-          key = args[n];
-        offset = block_add_string(this.db.buffer[bidx], offset, key, key.length, DBX_DSORT_SUBSCRIPT, DBX_DTYPE_STR, this.db.utf16);
+      if (request.async) {
+         async_command(this.db, this.db.buffer[bidx], offset, request, this.db.binary, args[request.argc]);
+         return null;
       }
-    }
-    offset = block_add_string(this.db.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR, 0)
-    offset = block_add_string(this.db.buffer[bidx], offset, options, options.length, DBX_DSORT_DATA, DBX_DTYPE_STR, this.db.utf16);
-    offset = block_add_string(this.db.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR, 0)
-    add_head(this.db.buffer[bidx], 0, offset, request.command);
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, this.db.binary);
+      this.db.get_result(this.db.buffer[bidx], pdata, request);
+      this.db.release_buffer(bidx);
 
-    if (request.async) {
-      async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
-      return null;
-    }
-    const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+      return request.result_data;
+   }
 
-    this.db.get_result(this.db.buffer[bidx], pdata, request);
-    this.db.release_buffer(bidx);
+   // v1.5.11
+   getchildnodes(...args: any[]): string {
+      let offset = 0;
+      let numerickeys = false;
+      let request = { command: DBX_CMND_GGETCHILDNODES, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
 
-    return request.result_data;
-  }
+      if (this.db.init === 0) {
+         return "";
+      }
+
+      let argn = args.length;
+      let optionsn = argn;
+
+      let options = "";
+      if (typeof args[argn - 1] === "object") {
+         if (args[argn - 1].hasOwnProperty('getdata') && args[argn - 1].getdata === true) {
+            options = options + "getdata:1\r\n";
+            request.mode = 1;
+         }
+         if (args[argn - 1].hasOwnProperty('max')) {
+            options = options + "max:" + args[argn - 1].max + "\r\n";
+         }
+         if (args[argn - 1].hasOwnProperty('start')) {
+            options = options + "start:" + args[argn - 1].start + "\r\n";
+         }
+         if (args[argn - 1].hasOwnProperty('end')) {
+            options = options + "end:" + args[argn - 1].end + "\r\n";
+         }
+         if (args[argn - 1].hasOwnProperty('lock') && args[argn - 1].lock === true) { // v1.5.12
+            options = options + "lock:1\r\n";
+         }
+         if (args[argn - 1].hasOwnProperty('locktimeout')) {
+            options = options + "locktimeout:" + args[argn - 1].locktimeout + "\r\n";
+         }
+         if (args[argn - 1].hasOwnProperty('numerickeys') && args[argn - 1].numerickeys === true) { // v1.5.12
+            options = options + "numerickeys:1\r\n";
+            numerickeys = true;
+            request.mode = 2;
+         }
+      }
+
+      if (options.length > 0) {
+         options = options + "\r\n";
+         optionsn = argn - 1;
+      }
+
+      let key = "";
+      let value = "";
+
+      let bidx = this.db.get_buffer();
+      offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
+      if (argn > 1) {
+         for (let n = 0; n < optionsn; n++) {
+            if (typeof args[n] === 'number')
+               key = args[n].toString();
+            else
+               key = args[n];
+            offset = block_add_string(this.db.buffer[bidx], offset, key, key.length, DBX_DSORT_SUBSCRIPT, DBX_DTYPE_STR, this.db.utf16);
+         }
+      }
+      offset = block_add_string(this.db.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR, 0)
+      offset = block_add_string(this.db.buffer[bidx], offset, options, options.length, DBX_DSORT_DATA, DBX_DTYPE_STR, this.db.utf16);
+      offset = block_add_string(this.db.buffer[bidx], offset, "", 0, DBX_DSORT_EOD, DBX_DTYPE_STR, 0)
+      add_head(this.db.buffer[bidx], 0, offset, request.command);
+
+      if (request.async) {
+         async_command(this.db, this.db.buffer[bidx], offset, request, this.db.binary, args[request.argc]);
+         return null;
+      }
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, this.db.binary);
+
+      this.db.get_result(this.db.buffer[bidx], pdata, request);
+      this.db.release_buffer(bidx);
+
+      return request.result_data;
+   }
 
    reset(...args: any[]) {
       let request = { command: 0, argc: 0, async: 0, result_data: "", error_message: "", type: 0, mode: 0 };
@@ -1630,7 +1658,7 @@ class mclass {
             let bidx = this.db.get_buffer();
 
             offset = this.db.pack_arguments(this.db.buffer[bidx], offset, db.index, args, request, 0);
-            const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+            const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, this.db.binary);
             this.db.get_result(this.db.buffer[bidx], pdata, request);
             this.db.release_buffer(bidx);
 
@@ -1654,10 +1682,10 @@ class mclass {
       offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
       offset = this.db.pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, request, 1);
       if (request.async) {
-         async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this.db, this.db.buffer[bidx], offset, request, this.db.binary, args[request.argc]);
          return null;
       }
-      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, this.db.binary);
       this.db.get_result(this.db.buffer[bidx], pdata, request);
       this.db.release_buffer(bidx);
 
@@ -1680,10 +1708,10 @@ class mclass {
       offset = block_add_string(this.db.buffer[bidx], offset, this.oref, this.oref.length, DBX_DSORT_DATA, DBX_DTYPE_OREF, 0);
       offset = this.db.pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, request, 1);
       if (request.async) {
-         async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this.db, this.db.buffer[bidx], offset, request, this.db.binary, args[request.argc]);
          return null;
       }
-      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, this.db.binary);
       this.db.get_result(this.db.buffer[bidx], pdata, request);
       this.db.release_buffer(bidx);
 
@@ -1703,10 +1731,10 @@ class mclass {
       offset = block_add_string(this.db.buffer[bidx], offset, this.oref, this.oref.length, DBX_DSORT_DATA, DBX_DTYPE_OREF, 0);
       offset = this.db.pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, request, 1);
       if (request.async) {
-         async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this.db, this.db.buffer[bidx], offset, request, this.db.binary, args[request.argc]);
          return null;
       }
-      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, this.db.binary);
       this.db.get_result(this.db.buffer[bidx], pdata, request);
       this.db.release_buffer(bidx);
 
@@ -1726,10 +1754,10 @@ class mclass {
       offset = block_add_string(this.db.buffer[bidx], offset, this.oref, this.oref.length, DBX_DSORT_DATA, DBX_DTYPE_OREF, 0);
       offset = this.db.pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, request, 1);
       if (request.async) {
-         async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this.db, this.db.buffer[bidx], offset, request, this.db.binary, args[request.argc]);
          return null;
       }
-      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, this.db.binary);
       this.db.get_result(this.db.buffer[bidx], pdata, request);
       this.db.release_buffer(bidx);
 
@@ -1749,10 +1777,10 @@ class mclass {
       offset = block_add_string(this.db.buffer[bidx], offset, this.oref, this.oref.length, DBX_DSORT_DATA, DBX_DTYPE_OREF, 0);
       offset = this.db.pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, request, 1);
       if (request.async) {
-         async_command(this.db, this.db.buffer[bidx], offset, request, 0, args[request.argc]);
+         async_command(this.db, this.db.buffer[bidx], offset, request, this.db.binary, args[request.argc]);
          return null;
       }
-      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+      const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, this.db.binary);
       this.db.get_result(this.db.buffer[bidx], pdata, request);
       this.db.release_buffer(bidx);
 
@@ -1775,7 +1803,7 @@ class mclass {
             let bidx = this.db.get_buffer();
 
             offset = this.db.pack_arguments(this.db.buffer[bidx], offset, this.db.index, args, request, 0);
-            const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+            const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, this.db.binary);
             this.db.get_result(this.db.buffer[bidx], pdata, request);
             this.db.release_buffer(bidx);
 
@@ -2033,7 +2061,7 @@ class mcursor {
 
          offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
          this.db.buffer[bidx][4] = request.command;
-         const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+         const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, this.db.binary);
          this.db.get_result(this.db.buffer[bidx], pdata, request);
          if (request.error_message === "") {
             if (this.getdata) {
@@ -2072,7 +2100,7 @@ class mcursor {
          }
          offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
          this.db.buffer[bidx][4] = request.command;
-         const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+         const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, this.db.binary);
          this.db.get_result(this.db.buffer[bidx], pdata, request);
          if (request.error_message === "") {
             if (request.result_data.hasOwnProperty('key')) {
@@ -2099,7 +2127,7 @@ class mcursor {
          }
          offset = block_copy(this.db.buffer[bidx], offset, this.base_buffer, 0, this.base_offset);
          this.db.buffer[bidx][4] = request.command;
-         const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, 0);
+         const pdata = dbx.command(this.db.buffer[bidx], offset, request.command, this.db.binary);
          this.db.get_result(this.db.buffer[bidx], pdata, request);
          if (request.error_message === "") {
             this.base_offset = block_add_string(this.base_buffer, this.base_offset_first, request.result_data, request.result_data.length, DBX_DSORT_DATA, DBX_DTYPE_STR, this.db.utf16);
