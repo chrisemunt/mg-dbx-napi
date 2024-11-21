@@ -3,7 +3,7 @@
 High speed Synchronous and Asynchronous access to InterSystems Cache/IRIS and YottaDB from Node.js or Bun.
 
 Chris Munt <cmunt@mgateway.com>  
-16 October 2024, MGateway Ltd [http://www.mgateway.com](http://www.mgateway.com)
+21 November 2024, MGateway Ltd [http://www.mgateway.com](http://www.mgateway.com)
 
 * Verified to work with Node.js and the Bun JavaScript engine.
 * Two connectivity models to the InterSystems or YottaDB database are provided: High performance via the local database API or network based.
@@ -353,7 +353,7 @@ Example 3 (Native Unicode support for InterSystems DB Servers):
        var new_charset = db.charset('utf-16');
 
 * If the operation is successful this method will echo back the new character set name.  If not successful, the method will return the name of the current (unchanged) character set.
-* Currently supported character sets and encoding schemes: 'ascii', 'utf-8' and 'utf-16' for InterSystems DB Servers.
+* Currently supported character sets and encoding schemes: 'ascii', 'binary', 'utf-8' and 'utf-16' for InterSystems DB Servers.
 
 
 ### Setting (or resetting) the timeout for the connection
@@ -1252,3 +1252,7 @@ Unless required by applicable law or agreed to in writing, software distributed 
 	* This is a facility for storing and retrieving (in or from the DB Server) data held in numerically-keyed JavaScript arrays.
 * Allow multiple key values to be specified (as a JavaScript array) in the **setchildnodes()** method.
 * Include a minor optimisation for the YottaDB implementation of the **getchildnodes()** method.
+
+### v1.6.14 (21 November 2024)
+* Introduce support for binary data: db.charset('binary').
+	* Additionally, the 'ascii' character set will now work as expected: db.charset('ascii')
