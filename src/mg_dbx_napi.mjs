@@ -30,17 +30,17 @@ import { createRequire } from "module";
 import { type } from "os";
 const require = createRequire(import.meta.url);
 
-//let dbx;
+let dbx;
 let arch = process.arch;
 if (arch === 'x64' && process.platform === 'win32') arch = 'win';
 if (['win', 'arm64', 'x64'].includes(arch)) {
-   //dbx = require('mg-dbx-napi/' + arch);
+   dbx = require('mg-dbx-napi/' + arch);
 }
 else {
    // throw an error - platform not supported
 }
 
-const dbx = require('mg-dbx-napi.node');
+//const dbx = require('mg-dbx-napi.node');
 
 const DBX_VERSION_MAJOR       = 1;
 const DBX_VERSION_MINOR       = 6;
