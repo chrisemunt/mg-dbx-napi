@@ -5,7 +5,7 @@
 //   | Description: An Interface to InterSystems Cache/IRIS and YottaDB         |
 //   | Author:      Chris Munt cmunt@mgateway.com                               |
 //   |                         chris.e.munt@gmail.com                           |
-//   | Copyright(c) 2019 - 2024 MGateway Ltd                                    |
+//   | Copyright(c) 2019 - 2026 MGateway Ltd                                    |
 //   | Surrey UK.                                                               |
 //   | All rights reserved.                                                     |
 //   |                                                                          |
@@ -40,7 +40,7 @@ else {
 
 const DBX_VERSION_MAJOR: number      = 1;
 const DBX_VERSION_MINOR: number      = 6;
-const DBX_VERSION_BUILD: number      = 14;
+const DBX_VERSION_BUILD: number      = 15;
 
 const DBX_DSORT_INVALID: number      = 0;
 const DBX_DSORT_DATA: number         = 1;
