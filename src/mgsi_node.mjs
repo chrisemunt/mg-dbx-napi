@@ -5,7 +5,7 @@
 //   | Description: A Node.js superserver                                       |
 //   | Author:      Chris Munt cmunt@mgateway.com                               |
 //   |                         chris.e.munt@gmail.com                           |
-//   | Copyright(c) 2023 - 2024 MGateway Ltd                                    |
+//   | Copyright(c) 2023 - 2026 MGateway Ltd                                    |
 //   | Surrey UK.                                                               |
 //   | All rights reserved.                                                     |
 //   |                                                                          |
