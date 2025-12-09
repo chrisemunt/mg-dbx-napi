@@ -3,7 +3,7 @@
 High speed Synchronous and Asynchronous access to InterSystems Cache/IRIS and YottaDB from Node.js or Bun.
 
 Chris Munt <cmunt@mgateway.com>  
-21 November 2024, MGateway Ltd [http://www.mgateway.com](http://www.mgateway.com)
+9 December 2025, MGateway Ltd [http://www.mgateway.com](http://www.mgateway.com)
 
 * Verified to work with Node.js and the Bun JavaScript engine.
 * Two connectivity models to the InterSystems or YottaDB database are provided: High performance via the local database API or network based.
@@ -1174,7 +1174,7 @@ However, the packaging included within this repository means that it will automa
 
 ## <a name="license">License</a>
 
-Copyright (c) 2021-2024 MGateway Ltd,
+Copyright (c) 2021-2026 MGateway Ltd,
 Surrey UK.                                                      
 All rights reserved.
  
@@ -1254,5 +1254,12 @@ Unless required by applicable law or agreed to in writing, software distributed 
 * Include a minor optimisation for the YottaDB implementation of the **getchildnodes()** method.
 
 ### v1.6.14 (21 November 2024)
+
 * Introduce support for binary data: db.charset('binary').
 	* Additionally, the 'ascii' character set will now work as expected: db.charset('ascii')
+
+### v1.6.15 (9 December 2025)
+
+* Correct a potential memory access violation in the **dbx.setloglevel()** and **dbx.logmessage()** methods.
+
+
