@@ -3,7 +3,7 @@
 High speed Synchronous and Asynchronous access to InterSystems Cache/IRIS and YottaDB from Node.js or Bun.
 
 Chris Munt <cmunt@mgateway.com>  
-9 December 2025, MGateway Ltd [http://www.mgateway.com](http://www.mgateway.com)
+11 February 2026, MGateway Ltd [http://www.mgateway.com](http://www.mgateway.com)
 
 * Verified to work with Node.js and the Bun JavaScript engine.
 * Two connectivity models to the InterSystems or YottaDB database are provided: High performance via the local database API or network based.
@@ -1262,4 +1262,7 @@ Unless required by applicable law or agreed to in writing, software distributed 
 
 * Correct a potential memory access violation in the **dbx.setloglevel()** and **dbx.logmessage()** methods.
 
+### v1.6.16 (11 February 2026)
+
+* Introduce support for macOS.
 
