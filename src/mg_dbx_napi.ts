@@ -29,7 +29,8 @@
 let dbx;
 let arch = process.arch;
 if (arch === 'x64' && process.platform === 'win32') arch = 'win';
-if (['win', 'arm64', 'x64'].includes(arch)) {
+if (arch === 'arm64' && process.platform === 'darwin') arch = 'macos';
+if (['win', 'arm64', 'x64', 'macos'].includes(arch)) {
    dbx = require('mg-dbx-napi/' + arch);
 }
 else {
@@ -40,7 +41,7 @@ else {
 
 const DBX_VERSION_MAJOR: number      = 1;
 const DBX_VERSION_MINOR: number      = 6;
-const DBX_VERSION_BUILD: number      = 15;
+const DBX_VERSION_BUILD: number      = 16;
 
 const DBX_DSORT_INVALID: number      = 0;
 const DBX_DSORT_DATA: number         = 1;

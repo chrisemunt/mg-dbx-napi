@@ -33,7 +33,8 @@ const require = createRequire(import.meta.url);
 let dbx;
 let arch = process.arch;
 if (arch === 'x64' && process.platform === 'win32') arch = 'win';
-if (['win', 'arm64', 'x64'].includes(arch)) {
+if (arch === 'arm64' && process.platform === 'darwin') arch = 'macos';
+if (['win', 'arm64', 'x64', 'macos'].includes(arch)) {
    dbx = require('mg-dbx-napi/' + arch);
 }
 else {
@@ -44,7 +45,7 @@ else {
 
 const DBX_VERSION_MAJOR       = 1;
 const DBX_VERSION_MINOR       = 6;
-const DBX_VERSION_BUILD       = 15;
+const DBX_VERSION_BUILD       = 16;
 
 const DBX_DSORT_INVALID       = 0;
 const DBX_DSORT_DATA          = 1;
