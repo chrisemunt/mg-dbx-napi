@@ -1266,7 +1266,7 @@ Unless required by applicable law or agreed to in writing, software distributed 
 
 * Introduce support for macOS.
 
-### v1.6.16a (20 February 2026)
+### v1.6.17 (20 February 2026)
 
 * Minor changes to the packaging required to seamlessly support QEWD: https://www.npmjs.com/package/qewd
 

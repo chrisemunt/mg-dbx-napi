@@ -2,7 +2,7 @@
   "author": "Chris Munt <cmunt@mgateway.com> (http://www.gateway.com/)",
   "name": "mg-dbx-napi",
   "description": "High speed Synchronous and Asynchronous access to InterSystems Cache/IRIS and YottaDB from Node.js or Bun.",
-  "version": "1.6.16a",
+  "version": "1.6.17",
   "maintainers": "Chris Munt <cmunt@mgateway.com>",
   "homepage": "https://github.com/chrisemunt/mg-dbx-napi",
   "repository": {
