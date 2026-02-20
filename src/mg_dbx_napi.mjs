@@ -45,7 +45,7 @@ else {
 
 const DBX_VERSION_MAJOR       = 1;
 const DBX_VERSION_MINOR       = 6;
-const DBX_VERSION_BUILD       = 16;
+const DBX_VERSION_BUILD       = 17;
 
 const DBX_DSORT_INVALID       = 0;
 const DBX_DSORT_DATA          = 1;
